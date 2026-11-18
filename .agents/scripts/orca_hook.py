@@ -70,15 +70,20 @@ def is_swarm_worker_transcript(transcript_path):
         return False
 
 
-def resolve_worker_model(req_model, tool_args, config):
+def resolve_worker_model(req_model, tool_args, config, state=None):
+    if state is None:
+        state = {}
     adaptive_cfg = config.get("adaptiveEffort", {})
     tiers = config.get("tiers", {})
     allowed_models = set(config.get("allowedWorkerModels", []))
     default_tier = config.get("defaultTier", "hydrogen-high")
     fallback_model = tiers.get(default_tier, "gemini-4-hydrogen-high")
 
-    enable_carbon = config.get("enableCarbon", False)
+    # Determine Carbon capability safely:
+    # Machine-local capability (.orca-state.json) or explicit config override
+    enable_carbon = state.get("hasCarbon", False) or config.get("enableCarbon", False)
     carbon_fallback = config.get("carbonFallback", "gemini-4-argon-high")
+    live_models = state.get("liveModels")
 
     req_norm = req_model.strip().lower() if req_model else ""
     is_auto = req_norm in ("", "auto", "adaptive", "default")
@@ -98,6 +103,13 @@ def resolve_worker_model(req_model, tool_args, config):
             # Check if Carbon is targeted but disabled on this machine/account
             if "carbon" in candidate.lower() and not enable_carbon:
                 return carbon_fallback, "carbon_fallback_disabled", f"{candidate}->{carbon_fallback}"
+
+            # If live account inventory is known and candidate is not supported on this account,
+            # gracefully fall back to prevent platform tool execution failure
+            if live_models and candidate not in live_models:
+                safe_fallback = carbon_fallback if ("opus" in candidate or "argon" in candidate or "carbon" in candidate) else fallback_model
+                return safe_fallback, "live_model_fallback_unsupported", f"{candidate}->{safe_fallback}"
+
             return candidate, "explicit_alias" if req_norm in tiers else "explicit_allowed_model", detail
 
     # 2. Adaptive resolution from brief / tasks when enabled
@@ -164,7 +176,7 @@ def main():
         action = tool_args.get("action", "")
         if action in ("add", "model"):
             req_model = tool_args.get("model")
-            resolved_model, res_type, res_detail = resolve_worker_model(req_model, tool_args, config)
+            resolved_model, res_type, res_detail = resolve_worker_model(req_model, tool_args, config, state)
 
             out = {"decision": "allow"}
             if resolved_model != req_model:

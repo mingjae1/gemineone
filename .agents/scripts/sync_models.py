@@ -1,3 +1,4 @@
+import datetime
 import json
 import os
 import subprocess
@@ -5,7 +6,26 @@ import sys
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONFIG_PATH = os.path.join(BASE_DIR, "orca-config.json")
+STATE_PATH = os.path.join(BASE_DIR, ".orca-state.json")
 AGY_EXE = r"C:\Users\alswo\.gemini\bin\agy.exe"
+
+
+def load_json(path, default):
+    try:
+        if os.path.exists(path):
+            with open(path, "r", encoding="utf-8") as f:
+                return json.load(f)
+    except Exception:
+        pass
+    return default
+
+
+def save_json(path, data):
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+    except Exception:
+        pass
 
 
 def fetch_live_models():
@@ -45,24 +65,36 @@ def sync_config(dry_run=False):
     for mid, dname in models.items():
         print(f"  - {mid} ({dname})")
 
-    with open(CONFIG_PATH, "r", encoding="utf-8") as f:
-        cfg = json.load(f)
-
-    # Detect if Carbon is available in the account's API model list
-    carbon_available = any("carbon" in mid.lower() or "carbon" in dname.lower() for mid, dname in models.items())
-    print(f"\n[API Sync] Carbon access detected in current account: {carbon_available}")
+    # Detect if Carbon is available in the account's live API model list
+    carbon_available = any(
+        "carbon" in mid.lower() or "carbon" in dname.lower()
+        for mid, dname in models.items()
+    )
+    print(f"\n[API Sync] Carbon access detected on local machine: {carbon_available}")
 
     if not dry_run:
-        cfg["enableCarbon"] = carbon_available
-        # Merge new live models into allowedWorkerModels
+        # 1. Update local machine state (.orca-state.json - gitignored)
+        # This keeps the local environment aware of Ultra/Carbon without polluting the shared repo!
+        state = load_json(STATE_PATH, {})
+        state["liveModels"] = models
+        state["hasCarbon"] = carbon_available
+        state["lastSynced"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        save_json(STATE_PATH, state)
+        print(f"[API Sync] Saved local machine capabilities to gitignored .orca-state.json")
+
+        # 2. Update shared orca-config.json
+        # IMPORTANT: Keep enableCarbon safe for Pro users by default in shared config!
+        cfg = load_json(CONFIG_PATH, {})
         existing_allowed = set(cfg.get("allowedWorkerModels", []))
         for mid in models.keys():
             existing_allowed.add(mid)
         cfg["allowedWorkerModels"] = sorted(list(existing_allowed))
 
-        with open(CONFIG_PATH, "w", encoding="utf-8") as f:
-            json.dump(cfg, f, indent=2, ensure_ascii=False)
-        print(f"[API Sync] Updated {CONFIG_PATH} with live account entitlements!")
+        # Do NOT force enableCarbon=true in orca-config.json; local state handles it dynamically.
+        # This guarantees that Pro users who pull this repository or install it into projects
+        # will never crash from un-entitled models!
+        save_json(CONFIG_PATH, cfg)
+        print(f"[API Sync] Synced model pool in {CONFIG_PATH} (Safe for Pro & Ultra alike).")
 
     return models, carbon_available
 

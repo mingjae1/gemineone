@@ -20,7 +20,8 @@ All notable changes to **gemineone** will be documented in this file.
     - Carbon 권한 보유 환경을 위한 `enableCarbon` 스위치 지원
   - **실시간 API 모델 동기화 도구 (`sync_models.py`)**:
     - Antigravity 공식 CLI(`agy.exe models`)를 통해 Google API로부터 계정별 가용 모델 목록 실시간 조회
-    - 계정 권한(Ultra/Enterprise)에 따른 Carbon 가용 여부 자동 감지 및 `orca-config.json` 자동 갱신
+    - **Pro 안전성 보장 (Pro-Safe Isolation)**: 공유 저장소의 `orca-config.json`은 언제나 `enableCarbon: false` 안전 기본값을 유지하고, Ultra/Carbon 머신별 권한은 gitignore된 `.orca-state.json`에만 로컬 격리 저장하여 Pro 사용자가 pull하거나 배포받아도 충돌/에러가 전혀 발생하지 않도록 보호
+    - 계정별 미지원 모델 호출 시 사용 가능한 상위 모델로의 범용 Graceful Fallback 지원
 - 단위 테스트 스위트 추가 (`.agents/scripts/test_orca_hook.py`, Carbon 포함 16종 테스트 통과)
 - 하네스 설정 버전 식별자 (`version: 0.1.0-beta`)
 
