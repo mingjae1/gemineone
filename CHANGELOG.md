@@ -2,6 +2,20 @@
 
 All notable changes to **gemineone** will be documented in this file.
 
+## [0.2.0-beta] - 2026-11-19
+
+### Added
+- **실시간 API 모델 동기화 및 자동 업데이트 기능 (`sync_models.py`)**:
+  - Antigravity 공식 CLI(`agy.exe models`)를 통해 Google 백엔드 API로부터 계정별 실시간 가용 모델 목록을 원클릭으로 동기화
+  - **Pro 안전성 보장 (Pro-Safe Isolation)**: 공유 저장소의 `orca-config.json`은 언제나 `enableCarbon: false` 안전 기본값을 유지하고, Ultra/Carbon 머신별 권한은 gitignore된 `.orca-state.json`에만 로컬 격리 저장하여 Pro 사용자가 pull하거나 배포받아도 충돌/에러가 전혀 발생하지 않도록 보호
+  - **전 모델 범용 Graceful Fallback**: 계정에 없는 미지원/권한제한 모델이 요청되어도 에러 없이 상위 가용 모델(`gemini-4-argon-high` 등)로 안전하게 자동 전환
+- **Carbon Forward-Compatibility (미래 호환성)**:
+  - `gemini-4-carbon` 공식 모델 ID 및 티어 매핑 정규화
+  - 권한 미보유/비활성화 환경을 위한 Graceful Fallback (`carbonFallback`: `gemini-4-argon-high`)
+- 하네스 설정 버전 식별자 (`version: 0.2.0-beta`)
+
+---
+
 ## [0.1.0-beta] - 2026-11-19
 
 ### Added
@@ -14,15 +28,7 @@ All notable changes to **gemineone** will be documented in this file.
     - 경량 스크립트 수정 / 단순 변경: `gemini-4-hydrogen-low`
     - 단순 설정 / .gitignore / 문서 / 포맷팅: `gemini-3.8-flash-high`
   - Gemini 모델 패밀리 전 티어 매트릭스 지원 (Flash Low~High, Hydrogen Low~XHigh, Argon Low~High)
-  - **Carbon Forward-Compatibility (미래 호환성)**:
-    - `gemini-4-carbon` 패밀리(`low`~`xhigh`) 사전 등록
-    - 권한 미보유/비활성화 환경을 위한 Graceful Fallback (`carbonFallback`: `gemini-4-argon-high`)
-    - Carbon 권한 보유 환경을 위한 `enableCarbon` 스위치 지원
-  - **실시간 API 모델 동기화 도구 (`sync_models.py`)**:
-    - Antigravity 공식 CLI(`agy.exe models`)를 통해 Google API로부터 계정별 가용 모델 목록 실시간 조회
-    - **Pro 안전성 보장 (Pro-Safe Isolation)**: 공유 저장소의 `orca-config.json`은 언제나 `enableCarbon: false` 안전 기본값을 유지하고, Ultra/Carbon 머신별 권한은 gitignore된 `.orca-state.json`에만 로컬 격리 저장하여 Pro 사용자가 pull하거나 배포받아도 충돌/에러가 전혀 발생하지 않도록 보호
-    - 계정별 미지원 모델 호출 시 사용 가능한 상위 모델로의 범용 Graceful Fallback 지원
-- 단위 테스트 스위트 추가 (`.agents/scripts/test_orca_hook.py`, Carbon 포함 16종 테스트 통과)
+- 단위 테스트 스위트 추가 (`.agents/scripts/test_orca_hook.py`, 16종 테스트 통과)
 - 하네스 설정 버전 식별자 (`version: 0.1.0-beta`)
 
 ---
