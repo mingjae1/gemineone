@@ -1,32 +1,104 @@
 {
+  "version": "0.1.0-beta",
   "enabled": true,
   "enforceWorkerForEdits": true,
-  "defaultTier": "hydrogen",
+  "defaultTier": "hydrogen-high",
+  "adaptiveEffort": {
+    "enabled": true,
+    "defaultModel": "gemini-4-hydrogen-high",
+    "rules": [
+      {
+        "name": "deep_architecture_concurrency",
+        "targetModel": "gemini-4-argon-high",
+        "keywords": [
+          "architect", "concurrency", "race condition", "deadlock", "distributed",
+          "rmi", "memory leak", "escalate", "stubborn", "synchronization",
+          "동시성", "분산", "아키텍처", "데드락", "경합", "메모리 누수", "에스컬레이션", "심층", "설계"
+        ]
+      },
+      {
+        "name": "complex_implementation_debug",
+        "targetModel": "gemini-4-hydrogen-xhigh",
+        "keywords": [
+          "complex", "heavy", "benchmark", "full test suite", "multi-module",
+          "심층 분석", "복합", "대규모", "전체 테스트", "까다로운"
+        ]
+      },
+      {
+        "name": "boilerplate_config_docs",
+        "targetModel": "gemini-3.8-flash-high",
+        "keywords": [
+          "gitignore", "readme", "format", "formatting", "typo", "boilerplate",
+          "cleanup", "lint", "comment", "docs", "documentation", "trivial",
+          "단순", "오타", "문서", "포맷", "설정", "정리", "주석", "보일러플레이트"
+        ]
+      },
+      {
+        "name": "light_scripting_edit",
+        "targetModel": "gemini-4-hydrogen-low",
+        "keywords": [
+          "light", "script", "rename", "minor", "경량", "수정", "단순 스크립트", "이름 변경"
+        ]
+      },
+      {
+        "name": "standard_development_test",
+        "targetModel": "gemini-4-hydrogen-high",
+        "keywords": [
+          "implement", "feature", "build", "test", "component", "refactor",
+          "api", "구현", "기능", "컴포넌트", "빌드", "테스트", "리팩토링"
+        ]
+      }
+    ]
+  },
   "tiers": {
     "flash": "gemini-3.8-flash-high",
-    "flash_low": "gemini-3.8-flash-high",
-    "flash_medium": "gemini-3.8-flash-high",
+    "flash-low": "gemini-3.8-flash-low",
+    "flash-medium": "gemini-3.8-flash-medium",
+    "flash-high": "gemini-3.8-flash-high",
+    "flash_low": "gemini-3.8-flash-low",
+    "flash_medium": "gemini-3.8-flash-medium",
     "flash_high": "gemini-3.8-flash-high",
-    "gemini-3.8-flash-low": "gemini-3.8-flash-high",
-    "gemini-3.8-flash-medium": "gemini-3.8-flash-high",
-    "hydrogen": "gemini-4-hydrogen-xhigh",
-    "low": "gemini-4-hydrogen-xhigh",
-    "medium": "gemini-4-hydrogen-xhigh",
-    "high": "gemini-4-hydrogen-xhigh",
-    "xhigh": "gemini-4-hydrogen-xhigh",
-    "gemini-4-hydrogen-low": "gemini-4-hydrogen-xhigh",
-    "gemini-4-hydrogen-medium": "gemini-4-hydrogen-xhigh",
-    "gemini-4-hydrogen-high": "gemini-4-hydrogen-xhigh",
+    "gemini-3.8-flash-low": "gemini-3.8-flash-low",
+    "gemini-3.8-flash-medium": "gemini-3.8-flash-medium",
+    "gemini-3.8-flash-high": "gemini-3.8-flash-high",
+    "hydrogen": "gemini-4-hydrogen-high",
+    "hydrogen-low": "gemini-4-hydrogen-low",
+    "hydrogen-medium": "gemini-4-hydrogen-medium",
+    "hydrogen-high": "gemini-4-hydrogen-high",
+    "hydrogen-xhigh": "gemini-4-hydrogen-xhigh",
+    "hydrogen_low": "gemini-4-hydrogen-low",
+    "hydrogen_medium": "gemini-4-hydrogen-medium",
+    "hydrogen_high": "gemini-4-hydrogen-high",
+    "hydrogen_xhigh": "gemini-4-hydrogen-xhigh",
+    "gemini-4-hydrogen-low": "gemini-4-hydrogen-low",
+    "gemini-4-hydrogen-medium": "gemini-4-hydrogen-medium",
+    "gemini-4-hydrogen-high": "gemini-4-hydrogen-high",
+    "gemini-4-hydrogen-xhigh": "gemini-4-hydrogen-xhigh",
     "argon": "gemini-4-argon-high",
-    "argon_low": "gemini-4-argon-high",
-    "argon_medium": "gemini-4-argon-high",
+    "argon-low": "gemini-4-argon-low",
+    "argon-medium": "gemini-4-argon-medium",
+    "argon-high": "gemini-4-argon-high",
+    "argon_low": "gemini-4-argon-low",
+    "argon_medium": "gemini-4-argon-medium",
     "argon_high": "gemini-4-argon-high",
-    "gemini-4-argon-low": "gemini-4-argon-high",
-    "gemini-4-argon-medium": "gemini-4-argon-high"
+    "gemini-4-argon-low": "gemini-4-argon-low",
+    "gemini-4-argon-medium": "gemini-4-argon-medium",
+    "gemini-4-argon-high": "gemini-4-argon-high",
+    "low": "gemini-4-hydrogen-low",
+    "medium": "gemini-4-hydrogen-medium",
+    "high": "gemini-4-hydrogen-high",
+    "xhigh": "gemini-4-hydrogen-xhigh"
   },
   "allowedWorkerModels": [
+    "gemini-3.8-flash-low",
+    "gemini-3.8-flash-medium",
     "gemini-3.8-flash-high",
+    "gemini-4-hydrogen-low",
+    "gemini-4-hydrogen-medium",
+    "gemini-4-hydrogen-high",
     "gemini-4-hydrogen-xhigh",
+    "gemini-4-argon-low",
+    "gemini-4-argon-medium",
     "gemini-4-argon-high"
   ],
   "exemptPathSubstrings": [
@@ -34,6 +106,8 @@
     ".gemini",
     "antigravity\\brain",
     "antigravity/brain",
-    "GEMINI.md"
+    "GEMINI.md",
+    "README.md",
+    "CHANGELOG.md"
   ]
 }

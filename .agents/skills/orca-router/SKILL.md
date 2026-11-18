@@ -2,8 +2,8 @@
 name: orca-router
 description: >-
   Project multi-model orchestrator skill enforcing 1D Flash fast intake,
-  max-effort swarm workers (gemini-3.8-flash-high, gemini-4-hydrogen-xhigh,
-  gemini-4-argon-high), and parallel fan-out via .agents/hooks.json.
+  adaptive thinking effort swarm workers across Gemini family (Flash, Hydrogen, Argon),
+  and parallel fan-out via .agents/hooks.json.
 ---
 
 # ORCA Multi-Model Router Skill
@@ -17,16 +17,18 @@ Direct file edits (`edit_file`, `write_file`, etc.) by the main coordinator outs
 - Answer simple questions or obvious clarifications immediately.
 - When codebase inspection is needed to craft architectural choices or `ask_question` options, immediately delegate that analysis to a Swarm worker instead of reading the codebase inline.
 
-## 2. Max-Effort Only Swarm Workers
-Thinking effort tiers are locked to **Max Effort** per model family. Any lower-effort model ID or alias passed to `swarm` is automatically upgraded by `orca_hook.py` to its family's max-effort model:
+## 2. Adaptive Thinking Effort Swarm Workers (적응형 노력치)
+Thinking effort tiers are adaptive across the Gemini model family to optimize quota consumption and reasoning power:
 
-1. **Routine / Config / Boilerplate (`gemini-3.8-flash-high`, alias: `flash`)**
-   - `.gitignore` setup, simple file generation, formatting, or trivial edits.
-2. **Default Analysis, Implementation & Test Loops (`gemini-4-hydrogen-xhigh`, alias: `hydrogen`)**
-   - Codebase inspection to prepare structured `ask_question` options (pass `fork: "coordinator"` when prior conversation context is needed).
-   - Multi-step implementation, Gradle/javac builds, test runs, and bug fixes.
-3. **Deep Architecture / Complex Escalation (`gemini-4-argon-high`, alias: `argon`)**
-   - Deep architectural design, complex concurrency/RMI debugging, or stubborn bugs escalated from `hydrogen`.
+1. **Explicit Tier Respected**:
+   - Explicitly requested tiers (`low`, `medium`, `high`, `xhigh`) or specific models (e.g. `gemini-4-hydrogen-low`, `gemini-3.8-flash-medium`) are honored directly without forced upgrading.
+2. **Adaptive Auto-Routing (Brief & Keyword Analysis)**:
+   - When `model` is omitted or set to `auto`, `orca_hook.py` evaluates the task brief and keywords:
+     - **Deep Architecture / Concurrency (`gemini-4-argon-high`)**: Distributed systems, RMI, concurrency, race conditions, deadlocks, memory leaks.
+     - **Complex Implementation / Debug (`gemini-4-hydrogen-xhigh`)**: Large-scale multi-module changes, heavy benchmarks, comprehensive test suites.
+     - **Standard Development & Tests (`gemini-4-hydrogen-high`, Default)**: Standard feature implementation, component authoring, unit test loops, and bug fixes.
+     - **Light Scripting & Minor Edits (`gemini-4-hydrogen-low`)**: Minor refactoring, script tweaks, simple rename.
+     - **Boilerplate / Config / Docs (`gemini-3.8-flash-high`)**: `.gitignore`, formatting, typos, README updates, trivial config.
 
 ## 3. Parallel Fan-out for Independent Tasks
 When multiple tasks exist without sequential dependencies:

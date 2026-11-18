@@ -70,6 +70,43 @@ def is_swarm_worker_transcript(transcript_path):
         return False
 
 
+def resolve_worker_model(req_model, tool_args, config):
+    adaptive_cfg = config.get("adaptiveEffort", {})
+    tiers = config.get("tiers", {})
+    allowed_models = set(config.get("allowedWorkerModels", []))
+    default_tier = config.get("defaultTier", "hydrogen-high")
+    fallback_model = tiers.get(default_tier, "gemini-4-hydrogen-high")
+
+    req_norm = req_model.strip().lower() if req_model else ""
+    is_auto = req_norm in ("", "auto", "adaptive", "default")
+
+    # 1. Explicit model or specific tier alias requested
+    if not is_auto:
+        if req_norm in tiers:
+            return tiers[req_norm], "explicit_alias", req_norm
+        if req_model in allowed_models:
+            return req_model, "explicit_allowed_model", None
+
+    # 2. Adaptive resolution from brief / tasks when enabled
+    if adaptive_cfg.get("enabled", True):
+        brief = tool_args.get("brief", "")
+        tasks = tool_args.get("tasks", [])
+        combined_text = (str(brief) + " " + " ".join(str(t) for t in tasks)).lower()
+
+        rules = adaptive_cfg.get("rules", [])
+        for rule in rules:
+            target_model = rule.get("targetModel")
+            keywords = rule.get("keywords", [])
+            for kw in keywords:
+                if kw.lower() in combined_text:
+                    return target_model, "adaptive_keyword_match", f"{rule.get('name')}:{kw}"
+
+        adaptive_default = adaptive_cfg.get("defaultModel", fallback_model)
+        return adaptive_default, "adaptive_default_fallback", None
+
+    return fallback_model, "fallback_default", None
+
+
 def main():
     raw = sys.stdin.read()
     if not raw.strip():
@@ -95,11 +132,6 @@ def main():
     tool_name = tool_call.get("name", "")
     tool_args = tool_call.get("args", {}) or {}
 
-    tiers = config.get("tiers", {})
-    allowed_models = set(config.get("allowedWorkerModels", []))
-    default_tier = config.get("defaultTier", "hydrogen")
-    default_model = tiers.get(default_tier, "gemini-4-hydrogen-xhigh")
-
     workers = state.setdefault("workerConversations", {})
     is_worker = (conv_id in workers) or is_swarm_worker_transcript(transcript_path)
 
@@ -111,18 +143,12 @@ def main():
         state["coordinatorConversationId"] = conv_id
         save_json(STATE_PATH, state)
 
-    # 1. Handle swarm tool calls (normalize/overwrite model ID)
+    # 1. Handle swarm tool calls (adaptive / explicit resolution)
     if tool_name == "swarm":
         action = tool_args.get("action", "")
         if action in ("add", "model"):
             req_model = tool_args.get("model")
-            resolved_model = req_model
-            if not req_model:
-                resolved_model = default_model
-            elif req_model in tiers:
-                resolved_model = tiers[req_model]
-            elif req_model not in allowed_models:
-                resolved_model = default_model
+            resolved_model, res_type, res_detail = resolve_worker_model(req_model, tool_args, config)
 
             out = {"decision": "allow"}
             if resolved_model != req_model:
@@ -137,6 +163,8 @@ def main():
                 "workerName": tool_args.get("name"),
                 "requestedModel": req_model,
                 "resolvedModel": resolved_model,
+                "resolutionType": res_type,
+                "resolutionDetail": res_detail,
                 "decision": "allow",
             })
             print(json.dumps(out, ensure_ascii=True))
@@ -154,7 +182,7 @@ def main():
         if not is_exempt_path(target_path, exempt_subs) and not is_worker:
             reason = (
                 f"[ORCA Guard] 메인 에이전트(conv={conv_id[:8]}, model={model_name})의 직접 파일 수정({tool_name} -> {target_path})이 차단되었습니다. "
-                f"반드시 swarm 도구(action='add')로 워커(예: 'gemini-3.8-flash-high', 'gemini-4-hydrogen-xhigh', 'gemini-4-argon-high')에게 작업을 위임하세요."
+                f"반드시 swarm 도구(action='add')로 워커(Gemini 계열 적응형 노력치 모델)에게 작업을 위임하세요."
             )
             append_audit({
                 "ts": datetime.datetime.now(datetime.timezone.utc).isoformat(),
