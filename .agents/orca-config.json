@@ -2,6 +2,8 @@
   "version": "0.1.0-beta",
   "enabled": true,
   "enforceWorkerForEdits": true,
+  "enableCarbon": false,
+  "carbonFallback": "gemini-4-argon-high",
   "defaultTier": "hydrogen-high",
   "adaptiveEffort": {
     "enabled": true,
@@ -11,41 +13,100 @@
         "name": "deep_architecture_concurrency",
         "targetModel": "gemini-4-argon-high",
         "keywords": [
-          "architect", "concurrency", "race condition", "deadlock", "distributed",
-          "rmi", "memory leak", "escalate", "stubborn", "synchronization",
-          "동시성", "분산", "아키텍처", "데드락", "경합", "메모리 누수", "에스컬레이션", "심층", "설계"
+          "architect",
+          "concurrency",
+          "race condition",
+          "deadlock",
+          "distributed",
+          "rmi",
+          "memory leak",
+          "escalate",
+          "stubborn",
+          "synchronization",
+          "동시성",
+          "분산",
+          "아키텍처",
+          "데드락",
+          "경합",
+          "메모리 누수",
+          "에스컬레이션",
+          "심층",
+          "설계"
         ]
       },
       {
         "name": "complex_implementation_debug",
         "targetModel": "gemini-4-hydrogen-xhigh",
         "keywords": [
-          "complex", "heavy", "benchmark", "full test suite", "multi-module",
-          "심층 분석", "복합", "대규모", "전체 테스트", "까다로운"
+          "complex",
+          "heavy",
+          "benchmark",
+          "full test suite",
+          "multi-module",
+          "심층 분석",
+          "복합",
+          "대규모",
+          "전체 테스트",
+          "까다로운"
         ]
       },
       {
         "name": "boilerplate_config_docs",
         "targetModel": "gemini-3.8-flash-high",
         "keywords": [
-          "gitignore", "readme", "format", "formatting", "typo", "boilerplate",
-          "cleanup", "lint", "comment", "docs", "documentation", "trivial",
-          "단순", "오타", "문서", "포맷", "설정", "정리", "주석", "보일러플레이트"
+          "gitignore",
+          "readme",
+          "format",
+          "formatting",
+          "typo",
+          "boilerplate",
+          "cleanup",
+          "lint",
+          "comment",
+          "docs",
+          "documentation",
+          "trivial",
+          "단순",
+          "오타",
+          "문서",
+          "포맷",
+          "설정",
+          "정리",
+          "주석",
+          "보일러플레이트"
         ]
       },
       {
         "name": "light_scripting_edit",
         "targetModel": "gemini-4-hydrogen-low",
         "keywords": [
-          "light", "script", "rename", "minor", "경량", "수정", "단순 스크립트", "이름 변경"
+          "light",
+          "script",
+          "rename",
+          "minor",
+          "경량",
+          "수정",
+          "단순 스크립트",
+          "이름 변경"
         ]
       },
       {
         "name": "standard_development_test",
         "targetModel": "gemini-4-hydrogen-high",
         "keywords": [
-          "implement", "feature", "build", "test", "component", "refactor",
-          "api", "구현", "기능", "컴포넌트", "빌드", "테스트", "리팩토링"
+          "implement",
+          "feature",
+          "build",
+          "test",
+          "component",
+          "refactor",
+          "api",
+          "구현",
+          "기능",
+          "컴포넌트",
+          "빌드",
+          "테스트",
+          "리팩토링"
         ]
       }
     ]
@@ -84,6 +145,19 @@
     "gemini-4-argon-low": "gemini-4-argon-low",
     "gemini-4-argon-medium": "gemini-4-argon-medium",
     "gemini-4-argon-high": "gemini-4-argon-high",
+    "carbon": "gemini-4-carbon-high",
+    "carbon-low": "gemini-4-carbon-low",
+    "carbon-medium": "gemini-4-carbon-medium",
+    "carbon-high": "gemini-4-carbon-high",
+    "carbon-xhigh": "gemini-4-carbon-xhigh",
+    "carbon_low": "gemini-4-carbon-low",
+    "carbon_medium": "gemini-4-carbon-medium",
+    "carbon_high": "gemini-4-carbon-high",
+    "carbon_xhigh": "gemini-4-carbon-xhigh",
+    "gemini-4-carbon-low": "gemini-4-carbon-low",
+    "gemini-4-carbon-medium": "gemini-4-carbon-medium",
+    "gemini-4-carbon-high": "gemini-4-carbon-high",
+    "gemini-4-carbon-xhigh": "gemini-4-carbon-xhigh",
     "low": "gemini-4-hydrogen-low",
     "medium": "gemini-4-hydrogen-medium",
     "high": "gemini-4-hydrogen-high",
@@ -99,7 +173,11 @@
     "gemini-4-hydrogen-xhigh",
     "gemini-4-argon-low",
     "gemini-4-argon-medium",
-    "gemini-4-argon-high"
+    "gemini-4-argon-high",
+    "gemini-4-carbon-low",
+    "gemini-4-carbon-medium",
+    "gemini-4-carbon-high",
+    "gemini-4-carbon-xhigh"
   ],
   "exemptPathSubstrings": [
     ".agents",

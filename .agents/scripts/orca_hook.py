@@ -77,15 +77,28 @@ def resolve_worker_model(req_model, tool_args, config):
     default_tier = config.get("defaultTier", "hydrogen-high")
     fallback_model = tiers.get(default_tier, "gemini-4-hydrogen-high")
 
+    enable_carbon = config.get("enableCarbon", False)
+    carbon_fallback = config.get("carbonFallback", "gemini-4-argon-high")
+
     req_norm = req_model.strip().lower() if req_model else ""
     is_auto = req_norm in ("", "auto", "adaptive", "default")
 
     # 1. Explicit model or specific tier alias requested
     if not is_auto:
+        candidate = None
+        detail = None
         if req_norm in tiers:
-            return tiers[req_norm], "explicit_alias", req_norm
-        if req_model in allowed_models:
-            return req_model, "explicit_allowed_model", None
+            candidate = tiers[req_norm]
+            detail = req_norm
+        elif req_model in allowed_models:
+            candidate = req_model
+            detail = req_model
+
+        if candidate:
+            # Check if Carbon is targeted but disabled on this machine/account
+            if "carbon" in candidate.lower() and not enable_carbon:
+                return carbon_fallback, "carbon_fallback_disabled", f"{candidate}->{carbon_fallback}"
+            return candidate, "explicit_alias" if req_norm in tiers else "explicit_allowed_model", detail
 
     # 2. Adaptive resolution from brief / tasks when enabled
     if adaptive_cfg.get("enabled", True):
@@ -99,6 +112,9 @@ def resolve_worker_model(req_model, tool_args, config):
             keywords = rule.get("keywords", [])
             for kw in keywords:
                 if kw.lower() in combined_text:
+                    # Dynamically escalate to Carbon if enabled on deep architecture tasks
+                    if rule.get("name") == "deep_architecture_concurrency" and enable_carbon:
+                        return "gemini-4-carbon-high", "adaptive_carbon_escalation", f"{rule.get('name')}:{kw}"
                     return target_model, "adaptive_keyword_match", f"{rule.get('name')}:{kw}"
 
         adaptive_default = adaptive_cfg.get("defaultModel", fallback_model)

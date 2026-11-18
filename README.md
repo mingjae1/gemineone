@@ -15,11 +15,12 @@
    - 쿼터 소모를 최적화하고 추론력을 극대화하기 위해 Gemini 계열(Flash, Hydrogen, Argon)의 **적응형 노력치(Adaptive Effort)**를 지원합니다:
      - **명시적 지정 존중**: `low`, `medium`, `high`, `xhigh` 또는 구체적 모델 ID 지정 시 강제 승격 없이 그대로 존중.
      - **태스크 기반 자동 감지 (`auto`)**: 작업 설명(brief) 및 키워드를 자동 분석하여 최적 모델 티어 동적 라우팅:
-       - `gemini-4-argon-high`: 동시성, 분산 시스템, 데드락, RMI, 심층 아키텍처
+       - `gemini-4-argon-high` (Carbon 활성화 시 `gemini-4-carbon-high`): 동시성, 분산 시스템, 데드락, RMI, 심층 아키텍처
        - `gemini-4-hydrogen-xhigh`: 대규모 복합 구현, 벤치마크, 풀 테스트 스위트
        - `gemini-4-hydrogen-high` (기본값): 표준 기능 구현, 컴포넌트 개발, 유닛 테스트
        - `gemini-4-hydrogen-low`: 경량 스크립트 수정, 단순 변경
        - `gemini-3.8-flash-high`: 단순 설정, `.gitignore`, 포맷팅, 문서 정리
+     - **Carbon 미래 호환성**: `gemini-4-carbon` 패밀리 사전 등록 및 Graceful Fallback 지원 (`enableCarbon: true/false`). 미지원 환경에서는 안전하게 `gemini-4-argon-high`로 자동 전환.
 
 3. **Parallel Fan-out (독립 태스크 병렬 멀티프로세싱)**
    - 상호 의존성이 없는 독립 작업은 순차적으로 처리하지 않고, 한 턴에 여러 워커를 동시 투입하여 병렬로 처리합니다.

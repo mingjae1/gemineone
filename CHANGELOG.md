@@ -14,7 +14,11 @@ All notable changes to **gemineone** will be documented in this file.
     - 경량 스크립트 수정 / 단순 변경: `gemini-4-hydrogen-low`
     - 단순 설정 / .gitignore / 문서 / 포맷팅: `gemini-3.8-flash-high`
   - Gemini 모델 패밀리 전 티어 매트릭스 지원 (Flash Low~High, Hydrogen Low~XHigh, Argon Low~High)
-- 단위 테스트 스위트 추가 (`.agents/scripts/test_orca_hook.py`, 12종 테스트 통과)
+  - **Carbon Forward-Compatibility (미래 호환성)**:
+    - `gemini-4-carbon` 패밀리(`low`~`xhigh`) 사전 등록
+    - 권한 미보유/비활성화 환경을 위한 Graceful Fallback (`carbonFallback`: `gemini-4-argon-high`)
+    - Carbon 권한 보유 환경을 위한 `enableCarbon` 스위치 지원
+- 단위 테스트 스위트 추가 (`.agents/scripts/test_orca_hook.py`, Carbon 포함 16종 테스트 통과)
 - 하네스 설정 버전 식별자 (`version: 0.1.0-beta`)
 
 ---

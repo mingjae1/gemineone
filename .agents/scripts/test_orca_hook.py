@@ -5,6 +5,7 @@ import sys
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 HOOK_SCRIPT = os.path.join(BASE_DIR, "scripts", "orca_hook.py")
+CONFIG_PATH = os.path.join(BASE_DIR, "orca-config.json")
 
 
 def run_hook(payload):
@@ -109,6 +110,23 @@ def test_suite():
             },
             "expected_model": "gemini-4-hydrogen-high"
         },
+        # Carbon Forward-Compatibility tests (default: enableCarbon=false -> graceful fallback)
+        {
+            "name": "Carbon Fallback: Explicit 'carbon' with enableCarbon=false -> gemini-4-argon-high",
+            "payload": {
+                "conversationId": "c1",
+                "toolCall": {"name": "swarm", "args": {"action": "add", "model": "carbon", "brief": "High reasoning task"}}
+            },
+            "expected_model": "gemini-4-argon-high"
+        },
+        {
+            "name": "Carbon Fallback: Explicit 'gemini-4-carbon-high' with enableCarbon=false -> gemini-4-argon-high",
+            "payload": {
+                "conversationId": "c1",
+                "toolCall": {"name": "swarm", "args": {"action": "add", "model": "gemini-4-carbon-high", "brief": "High reasoning task"}}
+            },
+            "expected_model": "gemini-4-argon-high"
+        },
     ]
 
     all_passed = True
@@ -124,6 +142,50 @@ def test_suite():
         else:
             print(f"[FAIL] {t['name']}: expected {t['expected_model']}, got {actual_model} (res={res})")
             all_passed = False
+
+    # Carbon Enabled tests (temporarily set enableCarbon=true)
+    print("\n=== Carbon Enabled Environment Tests ===")
+    with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+        cfg = json.load(f)
+    cfg["enableCarbon"] = True
+    with open(CONFIG_PATH, "w", encoding="utf-8") as f:
+        json.dump(cfg, f, indent=2, ensure_ascii=False)
+
+    try:
+        carbon_tests = [
+            {
+                "name": "Carbon Enabled: Explicit 'carbon' -> gemini-4-carbon-high",
+                "payload": {
+                    "conversationId": "c1",
+                    "toolCall": {"name": "swarm", "args": {"action": "add", "model": "carbon", "brief": "High reasoning task"}}
+                },
+                "expected_model": "gemini-4-carbon-high"
+            },
+            {
+                "name": "Carbon Enabled: Adaptive concurrency task -> gemini-4-carbon-high",
+                "payload": {
+                    "conversationId": "c1",
+                    "toolCall": {"name": "swarm", "args": {"action": "add", "model": "auto", "brief": "분산 아키텍처 및 동시성 데드락 해결"}}
+                },
+                "expected_model": "gemini-4-carbon-high"
+            },
+        ]
+        for t in carbon_tests:
+            res = run_hook(t["payload"])
+            actual_model = (
+                res.get("overwrite", {}).get("model")
+                or t["payload"]["toolCall"]["args"].get("model")
+            )
+            if actual_model == t["expected_model"]:
+                print(f"[PASS] {t['name']} -> {actual_model}")
+            else:
+                print(f"[FAIL] {t['name']}: expected {t['expected_model']}, got {actual_model} (res={res})")
+                all_passed = False
+    finally:
+        # Restore enableCarbon=false
+        cfg["enableCarbon"] = False
+        with open(CONFIG_PATH, "w", encoding="utf-8") as f:
+            json.dump(cfg, f, indent=2, ensure_ascii=False)
 
     # Test file edit guard
     print("\n=== ORCA Guard File Edit Gating Tests ===")
@@ -150,7 +212,7 @@ def test_suite():
         all_passed = False
 
     if all_passed:
-        print("\nAll 12 tests passed successfully!")
+        print("\nAll 16 tests passed successfully!")
     else:
         sys.exit(1)
 
