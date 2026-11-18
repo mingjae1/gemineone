@@ -1,0 +1,39 @@
+{
+  "enabled": true,
+  "enforceWorkerForEdits": true,
+  "defaultTier": "hydrogen",
+  "tiers": {
+    "flash": "gemini-3.8-flash-high",
+    "flash_low": "gemini-3.8-flash-high",
+    "flash_medium": "gemini-3.8-flash-high",
+    "flash_high": "gemini-3.8-flash-high",
+    "gemini-3.8-flash-low": "gemini-3.8-flash-high",
+    "gemini-3.8-flash-medium": "gemini-3.8-flash-high",
+    "hydrogen": "gemini-4-hydrogen-xhigh",
+    "low": "gemini-4-hydrogen-xhigh",
+    "medium": "gemini-4-hydrogen-xhigh",
+    "high": "gemini-4-hydrogen-xhigh",
+    "xhigh": "gemini-4-hydrogen-xhigh",
+    "gemini-4-hydrogen-low": "gemini-4-hydrogen-xhigh",
+    "gemini-4-hydrogen-medium": "gemini-4-hydrogen-xhigh",
+    "gemini-4-hydrogen-high": "gemini-4-hydrogen-xhigh",
+    "argon": "gemini-4-argon-high",
+    "argon_low": "gemini-4-argon-high",
+    "argon_medium": "gemini-4-argon-high",
+    "argon_high": "gemini-4-argon-high",
+    "gemini-4-argon-low": "gemini-4-argon-high",
+    "gemini-4-argon-medium": "gemini-4-argon-high"
+  },
+  "allowedWorkerModels": [
+    "gemini-3.8-flash-high",
+    "gemini-4-hydrogen-xhigh",
+    "gemini-4-argon-high"
+  ],
+  "exemptPathSubstrings": [
+    ".agents",
+    ".gemini",
+    "antigravity\\brain",
+    "antigravity/brain",
+    "GEMINI.md"
+  ]
+}

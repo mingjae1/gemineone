@@ -1,0 +1,17 @@
+{
+  "orca-multi-model-guard": {
+    "enabled": true,
+    "PreToolUse": [
+      {
+        "matcher": "swarm|edit_file|write_file|create_file|replace_file_content|multi_replace_file_content",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -X utf8 scripts/orca_hook.py",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

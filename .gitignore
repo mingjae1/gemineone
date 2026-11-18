@@ -1,0 +1,10 @@
+﻿# Antigravity & OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs & State
+*.log
+.orca-state.json
+__pycache__/
+*.pyc
