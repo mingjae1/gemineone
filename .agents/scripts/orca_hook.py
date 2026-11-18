@@ -114,7 +114,7 @@ def resolve_worker_model(req_model, tool_args, config):
                 if kw.lower() in combined_text:
                     # Dynamically escalate to Carbon if enabled on deep architecture tasks
                     if rule.get("name") == "deep_architecture_concurrency" and enable_carbon:
-                        return "gemini-4-carbon-high", "adaptive_carbon_escalation", f"{rule.get('name')}:{kw}"
+                        return "gemini-4-carbon", "adaptive_carbon_escalation", f"{rule.get('name')}:{kw}"
                     return target_model, "adaptive_keyword_match", f"{rule.get('name')}:{kw}"
 
         adaptive_default = adaptive_cfg.get("defaultModel", fallback_model)

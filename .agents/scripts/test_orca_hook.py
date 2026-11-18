@@ -120,10 +120,10 @@ def test_suite():
             "expected_model": "gemini-4-argon-high"
         },
         {
-            "name": "Carbon Fallback: Explicit 'gemini-4-carbon-high' with enableCarbon=false -> gemini-4-argon-high",
+            "name": "Carbon Fallback: Explicit 'gemini-4-carbon' with enableCarbon=false -> gemini-4-argon-high",
             "payload": {
                 "conversationId": "c1",
-                "toolCall": {"name": "swarm", "args": {"action": "add", "model": "gemini-4-carbon-high", "brief": "High reasoning task"}}
+                "toolCall": {"name": "swarm", "args": {"action": "add", "model": "gemini-4-carbon", "brief": "High reasoning task"}}
             },
             "expected_model": "gemini-4-argon-high"
         },
@@ -154,20 +154,20 @@ def test_suite():
     try:
         carbon_tests = [
             {
-                "name": "Carbon Enabled: Explicit 'carbon' -> gemini-4-carbon-high",
+                "name": "Carbon Enabled: Explicit 'carbon' -> gemini-4-carbon",
                 "payload": {
                     "conversationId": "c1",
                     "toolCall": {"name": "swarm", "args": {"action": "add", "model": "carbon", "brief": "High reasoning task"}}
                 },
-                "expected_model": "gemini-4-carbon-high"
+                "expected_model": "gemini-4-carbon"
             },
             {
-                "name": "Carbon Enabled: Adaptive concurrency task -> gemini-4-carbon-high",
+                "name": "Carbon Enabled: Adaptive concurrency task -> gemini-4-carbon",
                 "payload": {
                     "conversationId": "c1",
                     "toolCall": {"name": "swarm", "args": {"action": "add", "model": "auto", "brief": "분산 아키텍처 및 동시성 데드락 해결"}}
                 },
-                "expected_model": "gemini-4-carbon-high"
+                "expected_model": "gemini-4-carbon"
             },
         ]
         for t in carbon_tests:
