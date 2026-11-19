@@ -2,7 +2,7 @@
 name: orca-router
 description: >-
   Project multi-model orchestrator skill enforcing 1D Flash fast intake,
-  adaptive thinking effort swarm workers across Gemini family (Flash, Hydrogen, Argon),
+  adaptive thinking effort swarm workers across Gemini family (Flash, Hydrogen, Neon, Argon),
   and parallel fan-out via .agents/hooks.json.
 ---
 

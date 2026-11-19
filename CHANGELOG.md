@@ -2,6 +2,16 @@
 
 All notable changes to **gemineone** will be documented in this file.
 
+## [0.2.1-beta] - 2026-11-20
+
+### Added
+- **Gemini 4 Neon 패밀리 완벽 지원 (Antigravity v1.5.12 패치 대응)**:
+  - `gemini-4-neon-low`, `medium`, `high`, `xhigh` 전 티어 및 `gemini-pro-orchestrator-neon` 모델 풀 및 별칭(`neon`, `neon-*`) 등록
+  - 실전 Swarm 워커 생성 및 18종 적응형 노력치 단위 테스트 검증 완료 (쿼터 100% 가용)
+- 하네스 설정 버전 식별자 (`version: 0.2.1-beta`)
+
+---
+
 ## [0.2.0-beta] - 2026-11-19
 
 ### Added

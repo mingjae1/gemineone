@@ -105,10 +105,11 @@ def resolve_worker_model(req_model, tool_args, config, state=None):
                 return carbon_fallback, "carbon_fallback_disabled", f"{candidate}->{carbon_fallback}"
 
             # If live account inventory is known and candidate is not supported on this account,
-            # gracefully fall back to prevent platform tool execution failure
+            # gracefully fall back to prevent platform tool execution failure (unless Carbon is explicitly enabled)
             if live_models and candidate not in live_models:
-                safe_fallback = carbon_fallback if ("opus" in candidate or "argon" in candidate or "carbon" in candidate) else fallback_model
-                return safe_fallback, "live_model_fallback_unsupported", f"{candidate}->{safe_fallback}"
+                if not ("carbon" in candidate.lower() and enable_carbon):
+                    safe_fallback = carbon_fallback if ("opus" in candidate or "argon" in candidate or "carbon" in candidate) else fallback_model
+                    return safe_fallback, "live_model_fallback_unsupported", f"{candidate}->{safe_fallback}"
 
             return candidate, "explicit_alias" if req_norm in tiers else "explicit_allowed_model", detail
 

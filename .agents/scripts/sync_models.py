@@ -1,13 +1,26 @@
 import datetime
 import json
 import os
+import shutil
 import subprocess
 import sys
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONFIG_PATH = os.path.join(BASE_DIR, "orca-config.json")
 STATE_PATH = os.path.join(BASE_DIR, ".orca-state.json")
-AGY_EXE = r"C:\Users\alswo\.gemini\bin\agy.exe"
+
+# Dynamically locate agy.exe across different user environments
+def get_agy_path():
+    which_path = shutil.which("agy")
+    if which_path and os.path.exists(which_path):
+        return which_path
+    user_home = os.environ.get("USERPROFILE", os.path.expanduser("~"))
+    standard_path = os.path.join(user_home, ".gemini", "bin", "agy.exe")
+    if os.path.exists(standard_path):
+        return standard_path
+    return standard_path
+
+AGY_EXE = get_agy_path()
 
 
 def load_json(path, default):

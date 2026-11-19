@@ -12,7 +12,7 @@
 
 2. **Adaptive Effort Swarm Workers (후면 적응형 노력치 워커 위임)**
    - 실제 코드 분석, `ask_question` 선택지 설계, 빌드/테스트, 버그 수정은 백그라운드 Swarm 워커에게 위임됩니다.
-   - 쿼터 소모를 최적화하고 추론력을 극대화하기 위해 Gemini 계열(Flash, Hydrogen, Argon)의 **적응형 노력치(Adaptive Effort)**를 지원합니다:
+   - 쿼터 소모를 최적화하고 추론력을 극대화하기 위해 Gemini 계열(Flash, Hydrogen, Neon, Argon)의 **적응형 노력치(Adaptive Effort)**를 지원합니다:
      - **명시적 지정 존중**: `low`, `medium`, `high`, `xhigh` 또는 구체적 모델 ID 지정 시 강제 승격 없이 그대로 존중.
      - **태스크 기반 자동 감지 (`auto`)**: 작업 설명(brief) 및 키워드를 자동 분석하여 최적 모델 티어 동적 라우팅:
        - `gemini-4-argon-high` (Carbon 활성화 시 `gemini-4-carbon`): 동시성, 분산 시스템, 데드락, RMI, 심층 아키텍처

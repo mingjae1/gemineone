@@ -54,6 +54,22 @@ def test_suite():
             "expected_model": "gemini-3.8-flash-medium"
         },
         {
+            "name": "Explicit 'neon' -> gemini-4-neon-high",
+            "payload": {
+                "conversationId": "c1",
+                "toolCall": {"name": "swarm", "args": {"action": "add", "model": "neon", "brief": "Do work"}}
+            },
+            "expected_model": "gemini-4-neon-high"
+        },
+        {
+            "name": "Explicit 'neon-low' -> gemini-4-neon-low",
+            "payload": {
+                "conversationId": "c1",
+                "toolCall": {"name": "swarm", "args": {"action": "add", "model": "neon-low", "brief": "Do work"}}
+            },
+            "expected_model": "gemini-4-neon-low"
+        },
+        {
             "name": "Explicit full model 'gemini-4-argon-high'",
             "payload": {
                 "conversationId": "c1",
@@ -211,8 +227,9 @@ def test_suite():
         print(f"[FAIL] Expected allow, got: {allowed_edit}")
         all_passed = False
 
+    total_tests = len(tests) + len(carbon_tests) + 2
     if all_passed:
-        print("\nAll 16 tests passed successfully!")
+        print(f"\nAll {total_tests} tests passed successfully!")
     else:
         sys.exit(1)
 
