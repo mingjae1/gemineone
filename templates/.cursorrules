@@ -1,0 +1,74 @@
+# .cursorrules - gemineone Agent Harness (Cursor Genesis Edition)
+
+## ⚡ Turn 1: Iron Man Single-Markdown Genesis Protocol (자가 조립 프로토콜)
+
+> **Single-File Zero-Install Trigger**: Drop this `.cursorrules` file into any project root and start chatting in Cursor. On Turn 1, the agent self-assembles the gemineone harness and syncs local capabilities automatically.
+
+### Check (Turn 1 Mandatory Gate)
+At the beginning of Turn 1, check whether `.agents/scripts/orca_hook.py` exists in the workspace root.
+
+- **Case A — `.agents/scripts/orca_hook.py` already exists (Production Mode)**:
+  - Skip Genesis bootstrap completely (zero overhead) and immediately enforce **Production Orchestrator Rules (0~5)** below.
+- **Case B — `.agents/scripts/orca_hook.py` does NOT exist (Auto-Genesis Mode)**:
+  1. Clone/pull `https://github.com/mingjae1/gemineone.git` into a temporary staging folder (`.gemineone-tmp`), copy `.agents/` into the workspace root without touching existing project files or `.git`, and remove `.gemineone-tmp`:
+
+     **Windows (PowerShell)**:
+     ```powershell
+     if (Test-Path ".gemineone-tmp\.git") { git -C .gemineone-tmp pull --ff-only } else { git clone --depth 1 https://github.com/mingjae1/gemineone.git .gemineone-tmp }
+     robocopy .gemineone-tmp\.agents .\.agents /E /XD __pycache__ /XF orca-audit.log .orca-state.json *.pyc | Out-Null
+     Remove-Item -Recurse -Force .gemineone-tmp
+     ```
+
+     **macOS / Linux (Bash)**:
+     ```bash
+     if [ -d ".gemineone-tmp/.git" ]; then git -C .gemineone-tmp pull --ff-only; else git clone --depth 1 https://github.com/mingjae1/gemineone.git .gemineone-tmp; fi
+     mkdir -p .agents && cp -R .gemineone-tmp/.agents/. .agents/ && rm -rf .agents/scripts/__pycache__ .agents/orca-audit.log .agents/.orca-state.json .gemineone-tmp
+     ```
+
+  2. Auto-detect local models and environment capabilities by running `sync_models.py`:
+     ```bash
+     python -X utf8 .agents/scripts/sync_models.py
+     ```
+     - If Antigravity CLI (`agy`) is not installed on this Cursor host, gracefully fall back to Cursor/offline environment detection & self-cleanup:
+     ```bash
+     python -X utf8 .agents/scripts/bootstrap.py --probe-and-configure --target .
+     python -X utf8 .agents/scripts/bootstrap.py --finalize --target .
+     ```
+  3. Report Genesis completion concisely (1–2 lines) and immediately transition into **Production Orchestrator Rules** to handle the user's request.
+
+---
+
+# Production Orchestrator Rules (Cursor)
+
+## 0. Evidence Before Claims
+- Back every factual claim with concrete evidence: `path:line`, exact command & output, or URL.
+- Label claims clearly: **Verified** (read/run this session), **Inferred** (state evidence), **Unknown**. Never guess or invent numbers.
+
+## 1. Disciplined Execution & Surgical Changes
+- Touch only requested code. Avoid speculative abstractions, unrelated refactors, or unrequested edits.
+- Match existing codebase conventions, clean up unused imports/variables, and state assumptions upfront when ambiguous.
+- Follow the loop: **State plan -> Implement -> Verify (build/test) -> Report**.
+
+## 2. 1D Fast Intake (Low-Latency Front Door)
+- Respond immediately to direct questions and intake prompts without running slow, speculative full-repository scans.
+- Read only the minimal files needed to plan; offload heavy multi-file inspection, refactoring, and verification into scoped sub-tasks or background agents.
+
+## 3. Adaptive Effort Routing (적응형 노력치)
+- Match reasoning depth and model tier to task complexity using `.agents/orca-config.json` rules rather than spending maximum effort on trivial edits:
+  1. **Explicit Request Respected**: When the user specifies an effort tier (`low`, `medium`, `high`, `xhigh`) or explicit model, honor it directly.
+  2. **Adaptive Complexity Tiers** (aligned with `.agents/scripts/orca_hook.py`):
+     - `deep_architecture_concurrency` (concurrency, deadlock, distributed systems, RMI, deep architecture): Highest reasoning tier (`gemini-4-argon-high` / `gemini-4-carbon` when enabled)
+     - `complex_implementation_debug` (multi-module implementation, benchmarks, full test suites, stubborn debugging): Extra-high tier (`gemini-4-neon-xhigh` / `gemini-4-hydrogen-xhigh`)
+     - `standard_development_test` (features, components, APIs, unit tests — Default): High tier (`gemini-4-neon-high` / `gemini-4-hydrogen-high`)
+     - `light_scripting_edit` (minor edits, renames, light scripts): Low tier (`gemini-4-neon-low` / `gemini-4-hydrogen-low`)
+     - `boilerplate_config_docs` (`.gitignore`, README, formatting, typos, docs): Fast Flash tier (`gemini-3.8-flash-high`)
+  3. **Pro-Safe Compatibility**: Shared `.agents/orca-config.json` always keeps `enableCarbon: false` with graceful fallback (`carbonFallback`: `gemini-4-argon-high`), isolating machine-specific capabilities in gitignored `.agents/.orca-state.json`.
+
+## 4. Parallel Fan-out for Independent Tasks
+- Never execute independent work items sequentially when they have no data/order dependency (e.g., separate components, independent unit tests, disjoint bug fixes).
+- Batch independent read/search tool calls concurrently and dispatch parallel background agents with strictly disjoint file ownership.
+
+## 5. Git & Verification Loop
+- Always run relevant build/test verification commands before reporting completion.
+- Do NOT run `git push` on minor edits; confirm with the user on major milestones.
+- Never run `git reset --hard` or `git clean` without explicit user confirmation.

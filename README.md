@@ -37,11 +37,30 @@
    - `python -X utf8 .agents/scripts/sync_models.py` 실행 시 Antigravity 공식 CLI(`agy.exe models`)를 통해 현재 계정의 실시간 가용 모델을 자동 동기화합니다.
    - Pro 사용자가 안전하게 사용할 수 있도록 공유 설정은 Pro-Safe 기본값을 유지하며, Ultra 머신의 권한은 로컬 상태 파일에만 안전하게 격리 저장됩니다.
 
+7. **Iron Man Single-Markdown Genesis Engine (`templates/`)**
+   - 별도 설치 스크립트 없이 **단일 마크다운/룰 파일 하나**(`templates/GEMINI.md`, `templates/.cursorrules`, `templates/CLAUDE.md`)만 새 프로젝트 루트에 복사해 두고 첫 대화를 시작하면 에이전트가 스스로 하네스를 조립합니다.
+   - **Turn 1 자동 판별**:
+     - `.agents/scripts/orca_hook.py`가 없으면 `https://github.com/mingjae1/gemineone.git`에서 `.agents/`를 임시 클론/복사·자가 정리한 뒤 `sync_models.py`로 로컬 모델/기능을 자동 동기화하고 즉시 본 운영 모드로 전환합니다.
+     - 이미 설치되어 있으면 부트스트랩을 생략하고 지연 없이 Production Orchestrator Rules(1D Fast Intake, Adaptive Effort, Parallel Fan-out)를 바로 적용합니다.
+
 ---
 
 ## 📦 프로젝트에 적용하는 방법 (`v0.3.0-beta`)
 
-### Phase 1: 자동 설치 및 환경 프로브
+### 방법 A: Iron Man Single-Markdown Genesis (권장 · Zero-Install)
+사용하는 AI 코딩 에이전트에 맞는 템플릿 **파일 1개**만 대상 프로젝트 루트에 복사한 뒤 대화를 시작하세요:
+
+| 에이전트 | 복사할 템플릿 | 대상 경로 |
+| :--- | :--- | :--- |
+| **Google Antigravity** | `templates/GEMINI.md` | `<project>/GEMINI.md` |
+| **Cursor** | `templates/.cursorrules` | `<project>/.cursorrules` |
+| **Claude Code** | `templates/CLAUDE.md` | `<project>/CLAUDE.md` |
+
+Turn 1에서 에이전트가 `.agents/scripts/orca_hook.py` 유무를 자동 확인하여 미설치 시 하네스 조립 및 `sync_models.py` 동기화를 완료하고 즉시 오케스트레이션 모드로 전환합니다.
+
+### 방법 B: 로컬 `install.bat` 2단계 설치
+
+#### Phase 1: 자동 설치 및 환경 프로브
 새 프로젝트 폴더(예: `my-project`)에서 `install.bat`을 실행합니다:
 
 ```cmd
@@ -50,7 +69,7 @@ C:\path\to\gemineone\install.bat .
 
 설치가 완료되면 `.agents/`, `GEMINI.md`(기존 파일 보존), 환경 맞춤형 `.agents/orca-config.json`, 임시 온보딩 가이드 `SETUP.md`가 생성됩니다.
 
-### Phase 2: 첫 세션 확인 및 자가 청소 (Finalize)
+#### Phase 2: 첫 세션 확인 및 자가 청소 (Finalize)
 Antigravity에서 상단 모델을 **`Gemini 3.8 Flash (High)`**로 설정한 뒤, `SETUP.md`에 보고된 환경 진단 결과를 확인하고 아래 명령으로 셋업을 마무리합니다:
 
 ```cmd
@@ -66,4 +85,5 @@ python -X utf8 .agents/scripts/bootstrap.py --finalize --target .
 ```cmd
 python -X utf8 .agents/scripts/test_orca_hook.py
 python -X utf8 .agents/scripts/test_bootstrap.py
+python -X utf8 .agents/scripts/test_genesis.py
 ```
