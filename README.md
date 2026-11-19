@@ -1,4 +1,4 @@
-﻿# 🚀 gemineone (제미너네)
+﻿# 🚀 gemineone (제미너네) `v0.3.0-beta`
 
 **gemineone**은 Google Antigravity 에이전트를 위한 경량 고성능 멀티모델 오케스트레이션 하네스(Harness)입니다.
 
@@ -16,9 +16,9 @@
      - **명시적 지정 존중**: `low`, `medium`, `high`, `xhigh` 또는 구체적 모델 ID 지정 시 강제 승격 없이 그대로 존중.
      - **태스크 기반 자동 감지 (`auto`)**: 작업 설명(brief) 및 키워드를 자동 분석하여 최적 모델 티어 동적 라우팅:
        - `gemini-4-argon-high` (Carbon 활성화 시 `gemini-4-carbon`): 동시성, 분산 시스템, 데드락, RMI, 심층 아키텍처
-       - `gemini-4-hydrogen-xhigh`: 대규모 복합 구현, 벤치마크, 풀 테스트 스위트
-       - `gemini-4-hydrogen-high` (기본값): 표준 기능 구현, 컴포넌트 개발, 유닛 테스트
-       - `gemini-4-hydrogen-low`: 경량 스크립트 수정, 단순 변경
+       - `gemini-4-neon-xhigh` / `gemini-4-hydrogen-xhigh`: 대규모 복합 구현, 벤치마크, 풀 테스트 스위트
+       - `gemini-4-neon-high` / `gemini-4-hydrogen-high` (기본값): 표준 기능 구현, 컴포넌트 개발, 유닛 테스트
+       - `gemini-4-neon-low` / `gemini-4-hydrogen-low`: 경량 스크립트 수정, 단순 변경
        - `gemini-3.8-flash-high`: 단순 설정, `.gitignore`, 포맷팅, 문서 정리
      - **Carbon 미래 호환성**: `gemini-4-carbon` 패밀리 사전 등록 및 Graceful Fallback 지원 (`enableCarbon: true/false`). 미지원 환경에서는 안전하게 `gemini-4-argon-high`로 자동 전환.
 
@@ -29,18 +29,41 @@
 4. **Lifecycle PreToolUse Guard**
    - 코디네이터가 작업 파일을 직접 수정하려 하면 `.agents/hooks.json`이 차단하고 Swarm 워커 위임을 강제합니다.
 
-5. **Live API Model Sync (실시간 API 모델 동기화)**
+5. **Self-Bootstrapping Installer & Setup Harness (`v0.3.0-beta`)**
+   - `install.bat` 실행 시 `.agents/scripts/bootstrap.py --probe-and-configure`가 자동 실행되어 호스트 환경(Antigravity, Cursor, Claude Code), 실시간 가용 모델, MCP 서버, 플러그인을 감지하고 맞춤형 `orca-config.json` 및 `.orca-state.json`을 생성합니다.
+   - 첫 AI 세션을 위한 임시 가이드 `SETUP.md`를 생성하며, 셋업 확정 시 `--finalize` 명령으로 `SETUP.md`를 자가 청소(Self-Cleanup)하고 경량 운영 모드로 전환합니다.
+
+6. **Live API Model Sync (실시간 API 모델 동기화)**
    - `python -X utf8 .agents/scripts/sync_models.py` 실행 시 Antigravity 공식 CLI(`agy.exe models`)를 통해 현재 계정의 실시간 가용 모델을 자동 동기화합니다.
    - Pro 사용자가 안전하게 사용할 수 있도록 공유 설정은 Pro-Safe 기본값을 유지하며, Ultra 머신의 권한은 로컬 상태 파일에만 안전하게 격리 저장됩니다.
 
 ---
 
-## 📦 프로젝트에 적용하는 방법
+## 📦 프로젝트에 적용하는 방법 (`v0.3.0-beta`)
 
-새 프로젝트 폴더(예: `my-project`)에서:
+### Phase 1: 자동 설치 및 환경 프로브
+새 프로젝트 폴더(예: `my-project`)에서 `install.bat`을 실행합니다:
 
 ```cmd
 C:\path\to\gemineone\install.bat .
 ```
 
-실행 후 Antigravity에서 상단 모델을 **`Gemini 3.8 Flash (High)`**로 설정하면 바로 사용 가능합니다.
+설치가 완료되면 `.agents/`, `GEMINI.md`(기존 파일 보존), 환경 맞춤형 `.agents/orca-config.json`, 임시 온보딩 가이드 `SETUP.md`가 생성됩니다.
+
+### Phase 2: 첫 세션 확인 및 자가 청소 (Finalize)
+Antigravity에서 상단 모델을 **`Gemini 3.8 Flash (High)`**로 설정한 뒤, `SETUP.md`에 보고된 환경 진단 결과를 확인하고 아래 명령으로 셋업을 마무리합니다:
+
+```cmd
+python -X utf8 .agents/scripts/bootstrap.py --finalize --target .
+```
+
+실행 후 임시 `SETUP.md`는 자동 삭제되며, `.agents/.orca-state.json`에 완료 상태(`setupCompleted: true`)가 기록되어 본 운영 모드가 활성화됩니다.
+
+---
+
+## 🧪 검증 테스트 실행
+
+```cmd
+python -X utf8 .agents/scripts/test_orca_hook.py
+python -X utf8 .agents/scripts/test_bootstrap.py
+```

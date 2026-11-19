@@ -1,5 +1,5 @@
 {
-  "version": "0.2.1-beta",
+  "version": "0.3.0-beta",
   "enabled": true,
   "enforceWorkerForEdits": true,
   "enableCarbon": false,
@@ -214,6 +214,7 @@
     "antigravity/brain",
     "GEMINI.md",
     "README.md",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    "SETUP.md"
   ]
 }
