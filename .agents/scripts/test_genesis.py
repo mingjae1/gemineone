@@ -20,6 +20,8 @@ REQUIRED_TEMPLATES = {
     "GEMINI.md": os.path.join(TEMPLATES_DIR, "GEMINI.md"),
     ".cursorrules": os.path.join(TEMPLATES_DIR, ".cursorrules"),
     "CLAUDE.md": os.path.join(TEMPLATES_DIR, "CLAUDE.md"),
+    "CODEX.md": os.path.join(TEMPLATES_DIR, "CODEX.md"),
+    "AGENTS.md": os.path.join(TEMPLATES_DIR, "AGENTS.md"),
 }
 ROOT_GEMINI_MD = os.path.join(REPO_ROOT, "GEMINI.md")
 REPO_URL = "https://github.com/mingjae1/gemineone.git"
@@ -117,6 +119,16 @@ def test_templates_and_protocol_markers():
         assert_true("Adaptive" in content, f"{name}: missing Adaptive Effort rule")
         assert_true("Parallel Fan-out" in content, f"{name}: missing Parallel Fan-out rule")
         assert_true("Production Orchestrator Rules" in content, f"{name}: missing Production Orchestrator section")
+        assert_true("bootstrap.py --probe-and-configure" in content, f"{name}: missing bootstrap fallback probe")
+        assert_true("bootstrap.py --finalize" in content, f"{name}: missing bootstrap fallback finalize")
+
+    with open(REQUIRED_TEMPLATES["CODEX.md"], "r", encoding="utf-8-sig") as f:
+        codex_content = f.read()
+    assert_true("OpenAI Codex" in codex_content and "Copilot" in codex_content, "CODEX.md: missing Codex/Copilot markers")
+
+    with open(REQUIRED_TEMPLATES["AGENTS.md"], "r", encoding="utf-8-sig") as f:
+        agents_content = f.read()
+    assert_true("Universal" in agents_content and "AGENTS.md" in agents_content, "AGENTS.md: missing Universal Agent markers")
 
     assert_true(os.path.isfile(ROOT_GEMINI_MD), f"Root GEMINI.md missing: {ROOT_GEMINI_MD}")
     with open(ROOT_GEMINI_MD, "r", encoding="utf-8-sig") as f:
@@ -316,10 +328,10 @@ def test_genesis_pull_branch_and_production_skip():
 
 
 def test_cross_agent_templates_and_fallback():
-    """Verify Cursor (.cursorrules) & Claude Code (CLAUDE.md) single-file Genesis + offline fallback."""
+    """Verify Cursor (.cursorrules), Claude Code (CLAUDE.md), Codex (CODEX.md), and Universal (AGENTS.md) Genesis + offline fallback."""
     local_remote = "file:///" + REPO_ROOT.replace("\\", "/")
 
-    for tpl_name in (".cursorrules", "CLAUDE.md"):
+    for tpl_name in (".cursorrules", "CLAUDE.md", "CODEX.md", "AGENTS.md"):
         tmpdir = tempfile.mkdtemp(prefix=f"gemineone_{tpl_name.replace('.', '')}_")
         try:
             shutil.copy2(REQUIRED_TEMPLATES[tpl_name], os.path.join(tmpdir, tpl_name))
@@ -362,7 +374,7 @@ def main():
         ("Templates & Genesis Protocol markers + root GEMINI.md parity", test_templates_and_protocol_markers),
         ("Fresh mock workspace Genesis flow (clone + sync_models + prod hook)", test_genesis_fresh_mock_workspace),
         ("Staging git pull branch & Turn 2+ Production Mode skip", test_genesis_pull_branch_and_production_skip),
-        ("Cross-agent templates (.cursorrules, CLAUDE.md) + fallback cleanup", test_cross_agent_templates_and_fallback),
+        ("Cross-agent templates (.cursorrules, CLAUDE.md, CODEX.md, AGENTS.md) + fallback cleanup", test_cross_agent_templates_and_fallback),
     ]
 
     print("=== gemineone Iron Man Genesis Engine Test Suite ===")

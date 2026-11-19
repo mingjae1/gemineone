@@ -6,16 +6,18 @@ All notable changes to **gemineone** will be documented in this file.
 
 ### Added
 - **Iron Man Single-Markdown Genesis Engine (`templates/`, `GEMINI.md`)**:
-  - 멀티 에이전트 단일 파일 자가 조립 템플릿 3종 추가:
+  - 멀티 에이전트 단일 파일 자가 조립 템플릿 5종 추가:
     - `templates/GEMINI.md` (Google Antigravity Genesis)
     - `templates/.cursorrules` (Cursor Genesis)
     - `templates/CLAUDE.md` (Claude Code Genesis)
+    - `templates/CODEX.md` (OpenAI Codex / GitHub Copilot Genesis)
+    - `templates/AGENTS.md` (Universal Agent Genesis — OpenAI Codex CLI, Copilot 등 `AGENTS.md` 호환 에이전트 범용 지원)
   - 루트 `GEMINI.md`에 Turn 1 Genesis Protocol 반영 (`templates/GEMINI.md`와 동기화)
   - **Turn 1 자동 판별 및 무설치 부트스트랩**:
     - `.agents/scripts/orca_hook.py` 미존재 시 `https://github.com/mingjae1/gemineone.git`에서 임시 클론/풀(`.gemineone-tmp`) -> `.agents/` 복사 -> 임시 폴더 자동 제거 -> `sync_models.py` 로컬 모델·권한 동기화(비-Antigravity 환경은 `bootstrap.py` 프로브/자가청소 폴백) 후 즉시 Production Orchestrator 모드로 전환
     - 이미 설치된 프로젝트에서는 부트스트랩을 생략하고 1D Fast Intake, Adaptive Effort, Parallel Fan-out 규칙을 지연 없이 즉시 적용
 - **Genesis 자동화 검증 테스트 스위트 (`.agents/scripts/test_genesis.py`)**:
-  - 3종 템플릿 및 루트 `GEMINI.md` 프로토콜 마커 검증, 격리 목(Mock) 프로젝트에서의 git clone/pull·`.agents/` 조립·`sync_models.py` 동기화·Production 훅 라우팅/편집 가드 검증, Turn 2+ 스킵 및 Cursor/Claude 폴백 검증
+  - 5종 템플릿(`GEMINI.md`, `.cursorrules`, `CLAUDE.md`, `CODEX.md`, `AGENTS.md`) 및 루트 `GEMINI.md` 프로토콜 마커 검증, 격리 목(Mock) 프로젝트에서의 git clone/pull·`.agents/` 조립·`sync_models.py` 동기화·Production 훅 라우팅/편집 가드 검증, Turn 2+ 스킵 및 크로스 에이전트(Cursor/Claude/Codex/Universal) 폴백 검증
 - **Self-Bootstrapping Installer & Setup Engine (`.agents/scripts/bootstrap.py`)**:
   - `install.bat` 설치 시 자동으로 `bootstrap.py --probe-and-configure` 프로브를 실행하여 대상 프로젝트 환경을 자동 진단 및 구성
   - 호스트 AI 에이전트 환경 자동 감지 (Antigravity CLI, Cursor, Claude Code) 및 `agy.exe` 동적 경로 탐색

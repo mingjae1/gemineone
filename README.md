@@ -38,7 +38,7 @@
    - Pro 사용자가 안전하게 사용할 수 있도록 공유 설정은 Pro-Safe 기본값을 유지하며, Ultra 머신의 권한은 로컬 상태 파일에만 안전하게 격리 저장됩니다.
 
 7. **Iron Man Single-Markdown Genesis Engine (`templates/`)**
-   - 별도 설치 스크립트 없이 **단일 마크다운/룰 파일 하나**(`templates/GEMINI.md`, `templates/.cursorrules`, `templates/CLAUDE.md`)만 새 프로젝트 루트에 복사해 두고 첫 대화를 시작하면 에이전트가 스스로 하네스를 조립합니다.
+   - 별도 설치 스크립트 없이 **단일 마크다운/룰 파일 하나**(`templates/GEMINI.md`, `templates/.cursorrules`, `templates/CLAUDE.md`, `templates/CODEX.md`, `templates/AGENTS.md`)만 새 프로젝트 루트에 복사해 두고 첫 대화를 시작하면 에이전트가 스스로 하네스를 조립합니다.
    - **Turn 1 자동 판별**:
      - `.agents/scripts/orca_hook.py`가 없으면 `https://github.com/mingjae1/gemineone.git`에서 `.agents/`를 임시 클론/복사·자가 정리한 뒤 `sync_models.py`로 로컬 모델/기능을 자동 동기화하고 즉시 본 운영 모드로 전환합니다.
      - 이미 설치되어 있으면 부트스트랩을 생략하고 지연 없이 Production Orchestrator Rules(1D Fast Intake, Adaptive Effort, Parallel Fan-out)를 바로 적용합니다.
@@ -55,6 +55,8 @@
 | **Google Antigravity** | `templates/GEMINI.md` | `<project>/GEMINI.md` |
 | **Cursor** | `templates/.cursorrules` | `<project>/.cursorrules` |
 | **Claude Code** | `templates/CLAUDE.md` | `<project>/CLAUDE.md` |
+| **OpenAI Codex / GitHub Copilot** | `templates/CODEX.md` | `<project>/CODEX.md` |
+| **Universal Agent (Codex CLI, Copilot, Windsurf 등)** | `templates/AGENTS.md` | `<project>/AGENTS.md` |
 
 Turn 1에서 에이전트가 `.agents/scripts/orca_hook.py` 유무를 자동 확인하여 미설치 시 하네스 조립 및 `sync_models.py` 동기화를 완료하고 즉시 오케스트레이션 모드로 전환합니다.
 
