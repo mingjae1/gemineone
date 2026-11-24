@@ -1,21 +1,21 @@
-﻿# GEMINI.md - gemineone Agent Harness (Iron Man Genesis Edition)
+﻿# GEMINI.md - gemineone Agent Harness
 
-## ⚡ Turn 1: Iron Man Single-Markdown Genesis Protocol (자가 조립 프로토콜)
+## ⚡ Turn 1: 단일 파일 무설치 자동 셋업 프로토콜 (Single-File Auto-Setup Protocol)
 
-> **Single-File Zero-Install Trigger**: 이 파일 하나만 프로젝트 루트에 두고 대화를 시작하면, 에이전트가 스스로 하네스를 조립하고 로컬 모델 환경을 동기화합니다.
+> **Single-File Zero-Install Trigger**: 이 파일 하나만 프로젝트 루트에 두고 대화를 시작하면, 에이전트가 스스로 하네스를 구성하고 로컬 모델 환경을 동기화합니다.
 
 ### Check (Turn 1 최우선 확인)
 대화 시작(Turn 1) 시 워크스페이스 루트에 `.agents/scripts/orca_hook.py` 파일이 존재하는지 확인합니다.
 
 - **Case A — `.agents/scripts/orca_hook.py`가 이미 존재하는 경우 (Production Mode)**:
-  - Genesis 부트스트랩을 **완전히 생략**하고, 지연 없이 아래 **Production Orchestrator Rules (0~5)**를 즉시 적용합니다.
-- **Case B — `.agents/scripts/orca_hook.py`가 존재하지 않는 경우 (Auto-Genesis Mode)**:
+  - 초기 설정을 **완전히 생략**하고, 지연 없이 아래 **Production Orchestrator Rules (0~5)**를 즉시 적용합니다.
+- **Case B — `.agents/scripts/orca_hook.py`가 존재하지 않는 경우 (Auto-Setup Mode)**:
   1. 아래 명령으로 `https://github.com/mingjae1/gemineone.git`에서 최신 하네스를 임시 폴더(`.gemineone-tmp`)로 클론/풀하고 `.agents/`만 현재 프로젝트로 복사한 뒤 임시 폴더를 즉시 정리합니다 (기존 프로젝트 파일과 `.git` 보존):
 
      **Windows (PowerShell)**:
      ```powershell
      if (Test-Path ".gemineone-tmp\.git") { git -C .gemineone-tmp pull --ff-only } else { git clone --depth 1 https://github.com/mingjae1/gemineone.git .gemineone-tmp }
-     robocopy .gemineone-tmp\.agents .\.agents /E /XD __pycache__ /XF orca-audit.log .orca-state.json *.pyc | Out-Null
+     robocopy .gemineone-tmp\.agents .\.agents /E /XJ /XD __pycache__ /XF orca-audit.log .orca-state.json *.pyc | Out-Null
      Remove-Item -Recurse -Force .gemineone-tmp
      ```
 
@@ -30,7 +30,7 @@
      python -X utf8 .agents/scripts/sync_models.py
      ```
      *(만약 `agy` CLI가 없는 오프라인/비-Antigravity 환경이라면 `python -X utf8 .agents/scripts/bootstrap.py --probe-and-configure --target . && python -X utf8 .agents/scripts/bootstrap.py --finalize --target .`로 Pro-Safe 기본 구성을 생성합니다.)*
-  3. 조립 완료 및 감지된 모델 요약을 1~2줄로 간단히 보고한 뒤, **즉시 아래 Production Orchestrator Rules로 전환**하여 사용자의 본래 요청을 처리합니다.
+  3. 환경 구성 완료 및 감지된 모델 요약을 1~2줄로 간단히 보고한 뒤, **즉시 아래 Production Orchestrator Rules로 전환**하여 사용자의 본래 요청을 처리합니다.
 
 ---
 

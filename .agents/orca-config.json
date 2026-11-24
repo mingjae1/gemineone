@@ -1,5 +1,5 @@
 {
-  "version": "0.3.0-beta",
+  "version": "0.4.0",
   "enabled": true,
   "enforceWorkerForEdits": true,
   "enableCarbon": false,
@@ -158,19 +158,19 @@
     "gemini-4-neon-medium": "gemini-4-neon-medium",
     "gemini-4-neon-high": "gemini-4-neon-high",
     "gemini-4-neon-xhigh": "gemini-4-neon-xhigh",
-    "carbon": "gemini-4-carbon",
+    "carbon": "gemini-4-carbon-high",
     "carbon-low": "gemini-4-carbon-low",
     "carbon-medium": "gemini-4-carbon-medium",
-    "carbon-high": "gemini-4-carbon",
+    "carbon-high": "gemini-4-carbon-high",
     "carbon-xhigh": "gemini-4-carbon-xhigh",
     "carbon_low": "gemini-4-carbon-low",
     "carbon_medium": "gemini-4-carbon-medium",
-    "carbon_high": "gemini-4-carbon",
+    "carbon_high": "gemini-4-carbon-high",
     "carbon_xhigh": "gemini-4-carbon-xhigh",
-    "gemini-4-carbon": "gemini-4-carbon",
+    "gemini-4-carbon": "gemini-4-carbon-high",
     "gemini-4-carbon-low": "gemini-4-carbon-low",
     "gemini-4-carbon-medium": "gemini-4-carbon-medium",
-    "gemini-4-carbon-high": "gemini-4-carbon",
+    "gemini-4-carbon-high": "gemini-4-carbon-high",
     "gemini-4-carbon-xhigh": "gemini-4-carbon-xhigh",
     "low": "gemini-4-hydrogen-low",
     "medium": "gemini-4-hydrogen-medium",
@@ -203,6 +203,8 @@
     "gemini-4-neon-low",
     "gemini-4-neon-medium",
     "gemini-4-neon-xhigh",
+    "gemini-pro-orchestrator",
+    "gemini-pro-orchestrator-argon",
     "gemini-pro-orchestrator-g1-pro",
     "gemini-pro-orchestrator-neon",
     "gpt-oss-120b-medium"
@@ -215,6 +217,9 @@
     "GEMINI.md",
     "README.md",
     "CHANGELOG.md",
-    "SETUP.md"
+    "SETUP.md",
+    "templates",
+    ".gitignore",
+    "install.bat"
   ]
 }

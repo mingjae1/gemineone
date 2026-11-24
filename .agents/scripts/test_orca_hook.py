@@ -146,44 +146,63 @@ def test_suite():
     ]
 
     all_passed = True
-    print("=== ORCA Adaptive Effort Test Suite ===")
-    for t in tests:
-        res = run_hook(t["payload"])
-        actual_model = (
-            res.get("overwrite", {}).get("model")
-            or t["payload"]["toolCall"]["args"].get("model")
-        )
-        if actual_model == t["expected_model"]:
-            print(f"[PASS] {t['name']} -> {actual_model}")
-        else:
-            print(f"[FAIL] {t['name']}: expected {t['expected_model']}, got {actual_model} (res={res})")
-            all_passed = False
 
-    # Carbon Enabled tests (temporarily set enableCarbon=true)
-    print("\n=== Carbon Enabled Environment Tests ===")
-    with open(CONFIG_PATH, "r", encoding="utf-8") as f:
-        cfg = json.load(f)
-    cfg["enableCarbon"] = True
-    with open(CONFIG_PATH, "w", encoding="utf-8") as f:
-        json.dump(cfg, f, indent=2, ensure_ascii=False)
+    # Backup original config & state for hermetic testing
+    orig_cfg = None
+    if os.path.exists(CONFIG_PATH):
+        with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+            orig_cfg = json.load(f)
+    orig_state = None
+    STATE_PATH = os.path.join(BASE_DIR, ".orca-state.json")
+    if os.path.exists(STATE_PATH):
+        with open(STATE_PATH, "r", encoding="utf-8") as f:
+            orig_state = json.load(f)
 
     try:
+        # 1. Pro-Safe environment tests (hasCarbon=False, enableCarbon=false)
+        if orig_state:
+            mock_state = dict(orig_state)
+            mock_state["hasCarbon"] = False
+            with open(STATE_PATH, "w", encoding="utf-8") as f:
+                json.dump(mock_state, f, indent=2, ensure_ascii=False)
+
+        print("=== ORCA Adaptive Effort Test Suite ===")
+        for t in tests:
+            res = run_hook(t["payload"])
+            actual_model = (
+                res.get("overwrite", {}).get("model")
+                or t["payload"]["toolCall"]["args"].get("model")
+            )
+            if actual_model == t["expected_model"]:
+                print(f"[PASS] {t['name']} -> {actual_model}")
+            else:
+                print(f"[FAIL] {t['name']}: expected {t['expected_model']}, got {actual_model} (res={res})")
+                all_passed = False
+
+        # 2. Carbon Enabled tests (temporarily set enableCarbon=true)
+        print("\n=== Carbon Enabled Environment Tests ===")
+        with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+            cfg = json.load(f)
+        cfg["enableCarbon"] = True
+        with open(CONFIG_PATH, "w", encoding="utf-8") as f:
+            json.dump(cfg, f, indent=2, ensure_ascii=False)
+
         carbon_tests = [
             {
-                "name": "Carbon Enabled: Explicit 'carbon' -> gemini-4-carbon",
+                "name": "Carbon Enabled: Explicit 'carbon' -> gemini-4-carbon-high",
                 "payload": {
                     "conversationId": "c1",
                     "toolCall": {"name": "swarm", "args": {"action": "add", "model": "carbon", "brief": "High reasoning task"}}
                 },
-                "expected_model": "gemini-4-carbon"
+                "expected_model": "gemini-4-carbon-high"
             },
             {
-                "name": "Carbon Enabled: Adaptive concurrency task -> gemini-4-carbon",
+                "name": "Carbon Enabled: Adaptive concurrency task -> gemini-4-carbon-high",
                 "payload": {
                     "conversationId": "c1",
                     "toolCall": {"name": "swarm", "args": {"action": "add", "model": "auto", "brief": "분산 아키텍처 및 동시성 데드락 해결"}}
                 },
-                "expected_model": "gemini-4-carbon"
+                "expected_model": "gemini-4-carbon-high"
             },
         ]
         for t in carbon_tests:
@@ -198,17 +217,20 @@ def test_suite():
                 print(f"[FAIL] {t['name']}: expected {t['expected_model']}, got {actual_model} (res={res})")
                 all_passed = False
     finally:
-        # Restore enableCarbon=false
-        cfg["enableCarbon"] = False
-        with open(CONFIG_PATH, "w", encoding="utf-8") as f:
-            json.dump(cfg, f, indent=2, ensure_ascii=False)
+        # Restore original config & state
+        if orig_cfg:
+            with open(CONFIG_PATH, "w", encoding="utf-8") as f:
+                json.dump(orig_cfg, f, indent=2, ensure_ascii=False)
+        if orig_state:
+            with open(STATE_PATH, "w", encoding="utf-8") as f:
+                json.dump(orig_state, f, indent=2, ensure_ascii=False)
 
     # Test file edit guard
     print("\n=== ORCA Guard File Edit Gating Tests ===")
     blocked_edit = run_hook({
         "conversationId": "coord-conv",
         "modelName": "gemini-3.8-flash-high",
-        "toolCall": {"name": "edit_file", "args": {"Path": "c:\\Users\\alswo\\project\\src\\Main.java"}}
+        "toolCall": {"name": "edit_file", "args": {"Path": "c:\\Users\\developer\\project\\src\\Main.java"}}
     })
     if blocked_edit.get("decision") == "deny":
         print("[PASS] Coordinator edit outside exempt path is BLOCKED")
@@ -219,7 +241,7 @@ def test_suite():
     allowed_edit = run_hook({
         "conversationId": "coord-conv",
         "modelName": "gemini-3.8-flash-high",
-        "toolCall": {"name": "write_file", "args": {"Path": "c:\\Users\\alswo\\gemineone\\GEMINI.md"}}
+        "toolCall": {"name": "write_file", "args": {"Path": "c:\\Users\\developer\\gemineone\\GEMINI.md"}}
     })
     if allowed_edit.get("decision") == "allow":
         print("[PASS] Coordinator edit inside exempt path (GEMINI.md) is ALLOWED")

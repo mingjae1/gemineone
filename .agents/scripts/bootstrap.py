@@ -16,11 +16,13 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 def get_agy_path():
+    user_home = os.environ.get("USERPROFILE", os.path.expanduser("~"))
+    standard_path = os.path.join(user_home, ".gemini", "bin", "agy.exe")
+    if os.path.exists(standard_path):
+        return standard_path
     which_path = shutil.which("agy")
     if which_path and os.path.exists(which_path):
         return which_path
-    user_home = os.environ.get("USERPROFILE", os.path.expanduser("~"))
-    standard_path = os.path.join(user_home, ".gemini", "bin", "agy.exe")
     return standard_path
 
 
@@ -136,11 +138,26 @@ def probe_mcp_servers():
             with open(cursor_mcp, "r", encoding="utf-8") as f:
                 data = json.load(f)
                 for name, srv in data.get("mcpServers", {}).items():
-                    mcp_servers[f"cursor:{name}"] = {"source": "cursor", "config": srv}
-        except Exception:
-            pass
+                    sanitized = _sanitize_mcp_config(srv)
+                    mcp_servers[f"cursor:{name}"] = {"source": "cursor", "config": sanitized}
+        except (OSError, json.JSONDecodeError) as e:
+            print(f"[gemineone] Warning: failed to read {cursor_mcp}: {e}", file=sys.stderr)
 
     return mcp_servers
+
+
+def _sanitize_mcp_config(srv):
+    """Redacts sensitive fields (env, headers, auth tokens) from MCP server configs."""
+    if not isinstance(srv, dict):
+        return {}
+    sensitive_keys = {"env", "headers", "token", "apikey", "api_key", "secret", "password", "auth", "authorization"}
+    sanitized = {}
+    for k, v in srv.items():
+        if k.lower() in sensitive_keys:
+            sanitized[k] = "[REDACTED]"
+        else:
+            sanitized[k] = v
+    return sanitized
 
 
 def probe_plugins():
@@ -165,7 +182,7 @@ def generate_tailored_config(target_dir, models, mcp_servers, plugins, env_info)
 
     # Build safe base config
     cfg = {
-        "version": "0.3.0-beta",
+        "version": "0.4.0",
         "enabled": True,
         "enforceWorkerForEdits": True,
         "enableCarbon": False,  # Pro-safe default in shared config
@@ -353,6 +370,9 @@ def main():
     args = parser.parse_args()
 
     target_dir = os.path.abspath(args.target)
+    if not os.path.isdir(target_dir):
+        print(f"[gemineone] Error: target directory does not exist: {target_dir}", file=sys.stderr)
+        sys.exit(1)
 
     if args.finalize:
         finalize_setup(target_dir)

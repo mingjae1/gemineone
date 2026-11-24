@@ -1,91 +1,173 @@
-﻿# 🚀 gemineone (제미너네) `v0.3.0-beta`
+﻿# 🚀 gemineone (제미너네) `v0.4.0`
 
-**gemineone**은 Google Antigravity 에이전트를 위한 경량 고성능 멀티모델 오케스트레이션 하네스(Harness)입니다.
-
----
-
-## 🌟 핵심 아키텍처
-
-1. **1D Fast Intake (전면 대화 고속 접수)**
-   - 사용자와의 모든 직접 대화는 `gemini-3.8-flash-high`가 전담합니다.
-   - 첫 명령 접수 시 불필요한 사전 파일 스캔을 생략하여 지연 시간(Latency) 없이 즉각 반응합니다.
-
-2. **Adaptive Effort Swarm Workers (후면 적응형 노력치 워커 위임)**
-   - 실제 코드 분석, `ask_question` 선택지 설계, 빌드/테스트, 버그 수정은 백그라운드 Swarm 워커에게 위임됩니다.
-   - 쿼터 소모를 최적화하고 추론력을 극대화하기 위해 Gemini 계열(Flash, Hydrogen, Neon, Argon)의 **적응형 노력치(Adaptive Effort)**를 지원합니다:
-     - **명시적 지정 존중**: `low`, `medium`, `high`, `xhigh` 또는 구체적 모델 ID 지정 시 강제 승격 없이 그대로 존중.
-     - **태스크 기반 자동 감지 (`auto`)**: 작업 설명(brief) 및 키워드를 자동 분석하여 최적 모델 티어 동적 라우팅:
-       - `gemini-4-argon-high` (Carbon 활성화 시 `gemini-4-carbon`): 동시성, 분산 시스템, 데드락, RMI, 심층 아키텍처
-       - `gemini-4-neon-xhigh` / `gemini-4-hydrogen-xhigh`: 대규모 복합 구현, 벤치마크, 풀 테스트 스위트
-       - `gemini-4-neon-high` / `gemini-4-hydrogen-high` (기본값): 표준 기능 구현, 컴포넌트 개발, 유닛 테스트
-       - `gemini-4-neon-low` / `gemini-4-hydrogen-low`: 경량 스크립트 수정, 단순 변경
-       - `gemini-3.8-flash-high`: 단순 설정, `.gitignore`, 포맷팅, 문서 정리
-     - **Carbon 미래 호환성**: `gemini-4-carbon` 패밀리 사전 등록 및 Graceful Fallback 지원 (`enableCarbon: true/false`). 미지원 환경에서는 안전하게 `gemini-4-argon-high`로 자동 전환.
-
-3. **Parallel Fan-out (독립 태스크 병렬 멀티프로세싱)**
-   - 상호 의존성이 없는 독립 작업은 순차적으로 처리하지 않고, 한 턴에 여러 워커를 동시 투입하여 병렬로 처리합니다.
-   - 컴포넌트/파일 단위로 소유권을 분리하여 레이스 컨디션을 방지합니다.
-
-4. **Lifecycle PreToolUse Guard**
-   - 코디네이터가 작업 파일을 직접 수정하려 하면 `.agents/hooks.json`이 차단하고 Swarm 워커 위임을 강제합니다.
-
-5. **Self-Bootstrapping Installer & Setup Harness (`v0.3.0-beta`)**
-   - `install.bat` 실행 시 `.agents/scripts/bootstrap.py --probe-and-configure`가 자동 실행되어 호스트 환경(Antigravity, Cursor, Claude Code), 실시간 가용 모델, MCP 서버, 플러그인을 감지하고 맞춤형 `orca-config.json` 및 `.orca-state.json`을 생성합니다.
-   - 첫 AI 세션을 위한 임시 가이드 `SETUP.md`를 생성하며, 셋업 확정 시 `--finalize` 명령으로 `SETUP.md`를 자가 청소(Self-Cleanup)하고 경량 운영 모드로 전환합니다.
-
-6. **Live API Model Sync (실시간 API 모델 동기화)**
-   - `python -X utf8 .agents/scripts/sync_models.py` 실행 시 Antigravity 공식 CLI(`agy.exe models`)를 통해 현재 계정의 실시간 가용 모델을 자동 동기화합니다.
-   - Pro 사용자가 안전하게 사용할 수 있도록 공유 설정은 Pro-Safe 기본값을 유지하며, Ultra 머신의 권한은 로컬 상태 파일에만 안전하게 격리 저장됩니다.
-
-7. **Iron Man Single-Markdown Genesis Engine (`templates/`)**
-   - 별도 설치 스크립트 없이 **단일 마크다운/룰 파일 하나**(`templates/GEMINI.md`, `templates/.cursorrules`, `templates/CLAUDE.md`, `templates/CODEX.md`, `templates/AGENTS.md`)만 새 프로젝트 루트에 복사해 두고 첫 대화를 시작하면 에이전트가 스스로 하네스를 조립합니다.
-   - **Turn 1 자동 판별**:
-     - `.agents/scripts/orca_hook.py`가 없으면 `https://github.com/mingjae1/gemineone.git`에서 `.agents/`를 임시 클론/복사·자가 정리한 뒤 `sync_models.py`로 로컬 모델/기능을 자동 동기화하고 즉시 본 운영 모드로 전환합니다.
-     - 이미 설치되어 있으면 부트스트랩을 생략하고 지연 없이 Production Orchestrator Rules(1D Fast Intake, Adaptive Effort, Parallel Fan-out)를 바로 적용합니다.
+AI 코딩 에이전트를 위한 작업 분업 및 오케스트레이션 도구입니다. 대화 접수와 코드 작성을 분리하여 속도를 높이고 사용 쿼터를 절약합니다.
 
 ---
 
-## 📦 프로젝트에 적용하는 방법 (`v0.3.0-beta`)
+## 📑 목차
 
-### 방법 A: Iron Man Single-Markdown Genesis (권장 · Zero-Install)
-사용하는 AI 코딩 에이전트에 맞는 템플릿 **파일 1개**만 대상 프로젝트 루트에 복사한 뒤 대화를 시작하세요:
+1. [제미너네란?](#1-제미너네란)
+2. [설치 요령](#2-설치-요령)
+   - [파일 복사 (권장)](#파일-복사-권장)
+   - [CLI 설치](#cli-설치)
+   - [요구 사항](#요구-사항)
+3. [핵심 동작 원리](#3-핵심-동작-원리)
+   - [3.1 고속 접수](#31-고속-접수)
+   - [3.2 적응형 작업 위임](#32-적응형-작업-위임)
+   - [3.3 병렬 처리](#33-병렬-처리)
+   - [3.4 안전 가드](#34-안전-가드)
+4. [맞춤 설정 가이드](#4-맞춤-설정-가이드)
+   - [4.1 설정 파일](#41-설정-파일-agentsorca-configjson)
+   - [4.2 키워드 규칙 추가](#42-키워드-규칙-추가)
+   - [4.3 모델 동기화](#43-모델-동기화-sync_modelspy)
+5. [검증 테스트](#5-검증-테스트)
+6. [배포 가이드](#6-배포-가이드)
 
-| 에이전트 | 복사할 템플릿 | 대상 경로 |
+---
+
+## 1. 제미너네란?
+
+에이전트의 역할을 둘로 나눕니다.
+
+- **접수**: 사용자와의 대화를 즉각 처리합니다.
+- **작업**: 코드 분석, 구현, 테스트는 작업별 보조 작업자에게 넘깁니다.
+
+불필요한 고비용 호출을 줄이고, 메인 에이전트가 코드를 직접 고치다 발생하는 빌드 깨짐을 막습니다.
+
+---
+
+## 2. 설치 요령
+
+### 파일 복사 (권장)
+
+프로젝트 루트에 템플릿 파일 1개를 넣고 대화를 시작합니다.
+
+| 도구 | 템플릿 파일 | 대상 경로 |
 | :--- | :--- | :--- |
-| **Google Antigravity** | `templates/GEMINI.md` | `<project>/GEMINI.md` |
-| **Cursor** | `templates/.cursorrules` | `<project>/.cursorrules` |
-| **Claude Code** | `templates/CLAUDE.md` | `<project>/CLAUDE.md` |
-| **OpenAI Codex / GitHub Copilot** | `templates/CODEX.md` | `<project>/CODEX.md` |
-| **Universal Agent (Codex CLI, Copilot, Windsurf 등)** | `templates/AGENTS.md` | `<project>/AGENTS.md` |
+| **Google Antigravity** | `templates/GEMINI.md` | `GEMINI.md` |
+| **Cursor** | `templates/.cursorrules` | `.cursorrules` |
+| **Claude Code** | `templates/CLAUDE.md` | `CLAUDE.md` |
+| **OpenAI Codex / Copilot** | `templates/CODEX.md` | `CODEX.md` |
+| **Universal** | `templates/AGENTS.md` | `AGENTS.md` |
 
-Turn 1에서 에이전트가 `.agents/scripts/orca_hook.py` 유무를 자동 확인하여 미설치 시 하네스 조립 및 `sync_models.py` 동기화를 완료하고 즉시 오케스트레이션 모드로 전환합니다.
+#### 원클릭 다운로드
 
-### 방법 B: 로컬 `install.bat` 2단계 설치
-
-#### Phase 1: 자동 설치 및 환경 프로브
-새 프로젝트 폴더(예: `my-project`)에서 `install.bat`을 실행합니다:
-
-```cmd
-C:\path\to\gemineone\install.bat .
+**PowerShell**:
+```powershell
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/mingjae1/gemineone/main/templates/GEMINI.md" -OutFile "GEMINI.md"
 ```
 
-설치가 완료되면 `.agents/`, `GEMINI.md`(기존 파일 보존), 환경 맞춤형 `.agents/orca-config.json`, 임시 온보딩 가이드 `SETUP.md`가 생성됩니다.
+**Bash**:
+```bash
+curl -sSL "https://raw.githubusercontent.com/mingjae1/gemineone/main/templates/GEMINI.md" -o GEMINI.md
+```
 
-#### Phase 2: 첫 세션 확인 및 자가 청소 (Finalize)
-Antigravity에서 상단 모델을 **`Gemini 3.8 Flash (High)`**로 설정한 뒤, `SETUP.md`에 보고된 환경 진단 결과를 확인하고 아래 명령으로 셋업을 마무리합니다:
+파일 배치 후 질문을 던지면 첫 대화에서 필요한 환경(`.agents/`)을 스스로 구성하고 요청 작업을 바로 수행합니다.
+
+---
+
+### CLI 설치
 
 ```cmd
+# 1. 설치 및 진단
+C:\path\to\gemineone\install.bat .
+
+# 2. 셋업 완료 및 임시 파일 정리
 python -X utf8 .agents/scripts/bootstrap.py --finalize --target .
 ```
 
-실행 후 임시 `SETUP.md`는 자동 삭제되며, `.agents/.orca-state.json`에 완료 상태(`setupCompleted: true`)가 기록되어 본 운영 모드가 활성화됩니다.
+---
+
+### 요구 사항
+
+- Python 3.8 이상
+- Git 2.20 이상
 
 ---
 
-## 🧪 검증 테스트 실행
+## 3. 핵심 동작 원리
 
-```cmd
+### 3.1 고속 접수
+코드베이스 전체 스캔을 건너뛰고 사용자 질문을 즉시 수신합니다.
+
+### 3.2 적응형 작업 위임
+지시문의 키워드를 분석해 적합한 모델의 작업자를 배정합니다.
+
+| 작업 유형 | 할당 기준 | 대표 예시 |
+| :--- | :--- | :--- |
+| **심층 아키텍처** | 고난도 추론 모델 | 분산 시스템, 데드락, 경합 조건 |
+| **복합 구현** | 고성능 구현 모델 | 다중 모듈 개발, 벤치마크, 풀 테스트 |
+| **표준 기능 개발** | 균형 모델 | 신규 기능, API 연동, 컴포넌트 |
+| **경량 수정** | 고속 경량 모델 | 스크립트 수정, 변수명 변경 |
+| **문서 및 설정** | 초경량 모델 | .gitignore, 포맷팅, 주석 정리 |
+
+- 등급(`low`, `high` 등)을 직접 명시하면 그 요청을 우선합니다.
+- 계정에 없는 모델이 호출되면 지원되는 상위 모델로 자동 전환됩니다.
+
+### 3.3 병렬 처리
+서로 독립적인 여러 작업은 순차 대기 없이 작업자를 동시에 투입해 처리합니다.
+
+### 3.4 안전 가드
+메인 대화창의 직접적인 소스 코드 수정을 차단합니다. 모든 코드 변경은 보조 작업자가 수행해야 합니다. (설정 및 문서는 제외)
+
+---
+
+## 4. 맞춤 설정 가이드
+
+### 4.1 설정 파일 (`.agents/orca-config.json`)
+
+```json
+{
+  "enabled": true,               // 활성화 여부
+  "enforceWorkerForEdits": true, // 직접 수정 차단 가드
+  "defaultTier": "hydrogen-high",// 기본 작업자 등급
+  "exemptPathSubstrings": [      // 직접 수정 허용 경로
+    ".agents", "GEMINI.md", "README.md", "CHANGELOG.md", "templates"
+  ]
+}
+```
+
+### 4.2 키워드 규칙 추가
+`adaptiveEffort.rules`에 키워드를 추가해 원하는 유형으로 라우팅할 수 있습니다.
+
+```json
+{
+  "name": "deep_architecture_concurrency",
+  "keywords": ["동시성", "분산", "아키텍처", "내_키워드"]
+}
+```
+
+### 4.3 모델 동기화 (`sync_models.py`)
+
+```bash
+python -X utf8 .agents/scripts/sync_models.py
+```
+계정의 실시간 가용 모델 목록을 조회해 로컬 상태(`.orca-state.json`)에 기록합니다. 서비스에서 제외된 모델이 있더라도 에러 없이 현세대의 적합한 모델로 연결을 유지합니다.
+
+---
+
+## 5. 검증 테스트
+
+```bash
+# 라우팅 및 안전 가드 테스트
 python -X utf8 .agents/scripts/test_orca_hook.py
+
+# CLI 인스톨러 테스트
 python -X utf8 .agents/scripts/test_bootstrap.py
+
+# 단일 파일 셋업 테스트
 python -X utf8 .agents/scripts/test_genesis.py
+```
+
+---
+
+## 6. 배포 가이드
+
+```bash
+# 1. 태그 푸시
+git tag v0.4.0
+git push origin v0.4.0
+
+# 2. 릴리즈 발행
+gh release create v0.4.0 --title "v0.4.0" --notes-file CHANGELOG.md
 ```

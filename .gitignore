@@ -1,10 +1,70 @@
-﻿# Antigravity & OS files
+﻿# ==========================================
+# gemineone Local State & Transient Files
+# ==========================================
+**/.orca-state.json
+**/orca-audit.log
+*.log
+.gemineone-tmp/
+SETUP.md
+
+# ==========================================
+# Python & Bytecode
+# ==========================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ==========================================
+# Virtual Environments
+# ==========================================
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# ==========================================
+# IDEs, Editors & Operating Systems
+# ==========================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
 .DS_Store
 Thumbs.db
 desktop.ini
+*.tmp
 
-# Logs & State
-*.log
-.orca-state.json
-__pycache__/
-*.pyc
+# ==========================================
+# AI Agent Workspaces & Local Artifacts
+# ==========================================
+.gemini/
+.claude/
+antigravity/
+.system_generated/
+brain/
+*.docx
+*.xlsx
+*.pptx

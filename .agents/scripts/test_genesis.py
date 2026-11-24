@@ -88,6 +88,16 @@ def execute_genesis_assembly(workspace_dir, source_repo_url):
         dirs_exist_ok=True,
         ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "orca-audit.log", ".orca-state.json"),
     )
+    # If testing against local repo, overlay working tree .agents so uncommitted test changes are tested
+    if source_repo_url.startswith("file://"):
+        local_agents = os.path.join(REPO_ROOT, ".agents")
+        if os.path.isdir(local_agents):
+            shutil.copytree(
+                local_agents,
+                dst_agents,
+                dirs_exist_ok=True,
+                ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "orca-audit.log", ".orca-state.json"),
+            )
     rmtree_force(tmp_dir)
     assert_true(not os.path.exists(tmp_dir), "Temporary .gemineone-tmp folder was not cleaned up")
 
@@ -236,9 +246,10 @@ def test_genesis_fresh_mock_workspace():
             },
         )
         assert_true(res_arch.get("decision") == "allow", f"Expected allow, got {res_arch}")
+        expected_arch = "gemini-4-carbon-high" if state.get("hasCarbon") else "gemini-4-argon-high"
         assert_true(
-            res_arch.get("overwrite", {}).get("model") == "gemini-4-argon-high",
-            f"Expected gemini-4-argon-high, got {res_arch}",
+            res_arch.get("overwrite", {}).get("model") == expected_arch,
+            f"Expected {expected_arch}, got {res_arch}",
         )
 
         res_docs = run_hook_in_workspace(
@@ -377,7 +388,7 @@ def main():
         ("Cross-agent templates (.cursorrules, CLAUDE.md, CODEX.md, AGENTS.md) + fallback cleanup", test_cross_agent_templates_and_fallback),
     ]
 
-    print("=== gemineone Iron Man Genesis Engine Test Suite ===")
+    print("=== gemineone Single-File Auto-Setup Test Suite ===")
     passed = 0
     for name, fn in tests:
         try:

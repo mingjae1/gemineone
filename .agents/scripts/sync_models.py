@@ -11,13 +11,13 @@ STATE_PATH = os.path.join(BASE_DIR, ".orca-state.json")
 
 # Dynamically locate agy.exe across different user environments
 def get_agy_path():
-    which_path = shutil.which("agy")
-    if which_path and os.path.exists(which_path):
-        return which_path
     user_home = os.environ.get("USERPROFILE", os.path.expanduser("~"))
     standard_path = os.path.join(user_home, ".gemini", "bin", "agy.exe")
     if os.path.exists(standard_path):
         return standard_path
+    which_path = shutil.which("agy")
+    if which_path and os.path.exists(which_path):
+        return which_path
     return standard_path
 
 AGY_EXE = get_agy_path()
@@ -28,17 +28,25 @@ def load_json(path, default):
         if os.path.exists(path):
             with open(path, "r", encoding="utf-8") as f:
                 return json.load(f)
-    except Exception:
-        pass
+    except (OSError, json.JSONDecodeError) as e:
+        print(f"[API Sync] Warning: failed to load {path}: {e}", file=sys.stderr)
     return default
 
 
 def save_json(path, data):
+    tmp_path = f"{path}.tmp.{os.getpid()}"
     try:
-        with open(path, "w", encoding="utf-8") as f:
+        with open(tmp_path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
-    except Exception:
-        pass
+        os.replace(tmp_path, path)
+    except OSError as e:
+        print(f"[API Sync] Error: failed to save {path}: {e}", file=sys.stderr)
+        try:
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+        except OSError:
+            pass
+        raise
 
 
 def fetch_live_models():
@@ -46,13 +54,17 @@ def fetch_live_models():
     if not os.path.exists(AGY_EXE):
         raise FileNotFoundError(f"agy.exe not found at {AGY_EXE}")
 
-    proc = subprocess.run(
-        [AGY_EXE, "models"],
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-    )
+    try:
+        proc = subprocess.run(
+            [AGY_EXE, "models"],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=15,
+        )
+    except subprocess.TimeoutExpired as e:
+        raise RuntimeError(f"agy models command timed out after {e.timeout}s") from e
     if proc.returncode != 0:
         raise RuntimeError(f"agy models command failed: {proc.stderr}")
 

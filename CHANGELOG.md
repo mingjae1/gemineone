@@ -2,10 +2,40 @@
 
 All notable changes to **gemineone** will be documented in this file.
 
+## [0.4.0] - 2026-11-24
+
+### Added
+- **구세대 모델 서비스 종료(EOL) 대응 및 자동 승계 (Self-Healing Fallback)**:
+  - 구독형 AI 플랫폼 특성상 구세대 모델(예: Gemini 3.8 Flash 등)이 퇴역/서비스 제외되더라도, 사라진 모델을 찾아 에러를 내지 않고 실시간 인벤토리(`liveModels`) 대조를 통해 현세대 가성비/고속 모델(`gemini-4-neon-low` 등)로 자동 승계되는 자가 치유(Self-Healing) 로직 도입
+  - 특정 모델명 하드코딩에서 탈피하여 가용 모델 기반의 유연한 역할 중심 구조로 개편
+- **Gemini 4 Carbon 공식 모델 ID 정규화 및 실시간 활성화 지원**:
+  - `gemini-4-carbon-high`, `gemini-4-carbon-medium`, `gemini-4-carbon-low` 및 오케스트레이터 모델 풀 정규화
+  - Carbon 권한이 활성화된 로컬 머신에서의 동적 에스컬레이션 완벽 지원
+
+### Security (보안 강화)
+- **공개(Public) 저장소 전환 대비 엔터프라이즈급 보안 패치**:
+  - **명령어 인자 주입 차단**: `install.bat`에서 대상 경로의 특수문자(`&`, `|`, `<`, `>`, `^`, `%`) 검증 및 뒷슬래시 따옴표 이스케이프 버그 수정
+  - **민감정보 유출 원천 차단**: `bootstrap.py`의 MCP 서버 정보 수집 시 API 키, 비밀번호, 인증 토큰 자동 마스킹/제거(`_sanitize_mcp_config`)
+  - **경로 우회 취약점 해결**: `orca_hook.py`의 `is_exempt_path()`를 단순 서브스트링 검사에서 `os.path.normpath` 기반의 정확한 경로/파일명 단위 검사로 강화하여 소스 수정 가드 우회 차단
+  - **바이너리 가로채기(PATH Hijacking) 방어**: 작업 폴더 내 악성 파이썬 실행 파일 가로채기 방지(`NoDefaultCurrentDirectoryInExePath=1` 및 고유 시스템 경로 우선 검증)
+  - **정션 순환 및 탈출 차단**: `robocopy` 실행 시 정션/심볼릭 링크 탐색 제외 옵션(`/XJ`) 전면 적용
+  - **원자적 파일 쓰기(Atomic Write)**: 상태 파일 저장 시 `os.replace` 기반 원자적 저장을 적용해 동시성 충돌 및 파일 손상 방지
+  - **표준 `.gitignore` 대폭 강화**: 개인 식별 정보, 로컬 로그, 가상환경, 임시 상태 파일 완전 격리
+
+### Changed
+- **문서화 및 사용자 경험(UX) 전면 개편 (`README.md`)**:
+  - 비유적/모호한 표현과 중복 문구를 전면 걷어내고, 누구나 직관적으로 이해할 수 있는 표준 기술 용어로 재정의
+  - 하이퍼링크 목차(TOC) 신설: 1. 제미너네란? ➡️ 2. 설치 요령 ➡️ 3. 핵심 동작 원리 ➡️ 4. 맞춤 설정 가이드 ➡️ 5. 검증 테스트 ➡️ 6. 배포 가이드
+  - 특정 모델 ID 나열을 배제하고, 작업 난이도 및 역할 기반의 직관적인 분업 가이드로 개편
+- **버전 식별자 업데이트**:
+  - 전체 하네스 설정 및 템플릿 버전 식별자를 `v0.4.0`으로 갱신
+
+---
+
 ## [0.3.0-beta] - 2026-11-20
 
 ### Added
-- **Iron Man Single-Markdown Genesis Engine (`templates/`, `GEMINI.md`)**:
+- **단일 파일 무설치 자동 셋업 엔진 (Single-File Auto-Setup Engine, `templates/`, `GEMINI.md`)**:
   - 멀티 에이전트 단일 파일 자가 조립 템플릿 5종 추가:
     - `templates/GEMINI.md` (Google Antigravity Genesis)
     - `templates/.cursorrules` (Cursor Genesis)

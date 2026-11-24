@@ -1,15 +1,15 @@
-# AGENTS.md - gemineone Agent Harness (Universal Agent Genesis Edition)
+# AGENTS.md - gemineone Agent Harness (Universal Agent Edition)
 
-## ⚡ Turn 1: Iron Man Single-Markdown Genesis Protocol (자가 조립 프로토콜)
+## ⚡ Turn 1: 단일 파일 무설치 자동 셋업 프로토콜 (Single-File Auto-Setup Protocol)
 
-> **Universal Single-File Zero-Install Trigger**: Drop this `AGENTS.md` file into any project root to enable gemineone across any `AGENTS.md`-compatible AI coding agent (OpenAI Codex CLI, GitHub Copilot, Google Antigravity, Cursor, Windsurf, Cline, Amp, etc.). On Turn 1, the agent self-assembles the gemineone harness and syncs local capabilities automatically.
+> **Universal Single-File Zero-Install Trigger**: Drop this `AGENTS.md` file into any project root to enable gemineone across any `AGENTS.md`-compatible AI coding agent (OpenAI Codex CLI, GitHub Copilot, Google Antigravity, Cursor, Windsurf, Cline, Amp, etc.). On Turn 1, the agent automatically sets up the gemineone harness and syncs local capabilities.
 
 ### Check (Turn 1 Mandatory Gate)
 At the beginning of Turn 1, check whether `.agents/scripts/orca_hook.py` exists in the workspace root.
 
 - **Case A — `.agents/scripts/orca_hook.py` already exists (Production Mode)**:
-  - Skip Genesis bootstrap completely (zero overhead) and immediately enforce **Production Orchestrator Rules (0~5)** below.
-- **Case B — `.agents/scripts/orca_hook.py` does NOT exist (Auto-Genesis Mode)**:
+  - Skip initial setup completely (zero overhead) and immediately enforce **Production Orchestrator Rules (0~5)** below.
+- **Case B — `.agents/scripts/orca_hook.py` does NOT exist (Auto-Setup Mode)**:
   1. Clone/pull `https://github.com/mingjae1/gemineone.git` into a temporary staging directory (`.gemineone-tmp`), copy `.agents/` into the workspace root without disturbing existing project files or `.git`, and remove `.gemineone-tmp`:
 
      **macOS / Linux / Git Bash**:
@@ -21,7 +21,7 @@ At the beginning of Turn 1, check whether `.agents/scripts/orca_hook.py` exists 
      **Windows (PowerShell)**:
      ```powershell
      if (Test-Path ".gemineone-tmp\.git") { git -C .gemineone-tmp pull --ff-only } else { git clone --depth 1 https://github.com/mingjae1/gemineone.git .gemineone-tmp }
-     robocopy .gemineone-tmp\.agents .\.agents /E /XD __pycache__ /XF orca-audit.log .orca-state.json *.pyc | Out-Null
+     robocopy .gemineone-tmp\.agents .\.agents /E /XJ /XD __pycache__ /XF orca-audit.log .orca-state.json *.pyc | Out-Null
      Remove-Item -Recurse -Force .gemineone-tmp
      ```
 
@@ -34,7 +34,7 @@ At the beginning of Turn 1, check whether `.agents/scripts/orca_hook.py` exists 
      python -X utf8 .agents/scripts/bootstrap.py --probe-and-configure --target .
      python -X utf8 .agents/scripts/bootstrap.py --finalize --target .
      ```
-  3. Report Genesis completion concisely (1–2 lines) and immediately transition into **Production Orchestrator Rules** to fulfill the user's request.
+  3. Report auto-setup completion concisely (1–2 lines) and immediately transition into **Production Orchestrator Rules** to fulfill the user's request.
 
 ---
 

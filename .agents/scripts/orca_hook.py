@@ -34,11 +34,18 @@ def load_json(path, default):
 
 
 def save_json(path, data):
+    tmp_path = f"{path}.tmp.{os.getpid()}"
     try:
-        with open(path, "w", encoding="utf-8") as f:
+        with open(tmp_path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
-    except Exception:
-        pass
+        os.replace(tmp_path, path)
+    except OSError as e:
+        print(f"[ORCA] Warning: failed to save {path}: {e}", file=sys.stderr)
+        try:
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+        except OSError:
+            pass
 
 
 def append_audit(entry):
@@ -52,10 +59,24 @@ def append_audit(entry):
 def is_exempt_path(target_path, exempt_substrings):
     if not target_path:
         return False
-    norm = target_path.replace("/", "\\").lower()
+    norm_path = os.path.normpath(target_path).replace("/", "\\").lower()
+    parts = [p for p in norm_path.split("\\") if p]
+    basename = os.path.basename(norm_path)
     for sub in exempt_substrings:
-        if sub.replace("/", "\\").lower() in norm:
-            return True
+        sub_norm = os.path.normpath(sub).replace("/", "\\").lower().strip("\\")
+        if not sub_norm:
+            continue
+        if "\\" in sub_norm:
+            # Multi-segment path pattern: check exact segment boundary match
+            sub_parts = [p for p in sub_norm.split("\\") if p]
+            n = len(sub_parts)
+            for i in range(len(parts) - n + 1):
+                if parts[i:i + n] == sub_parts:
+                    return True
+        else:
+            # Single-segment pattern: match exact directory component or exact filename
+            if sub_norm in parts or basename == sub_norm:
+                return True
     return False
 
 
@@ -127,7 +148,7 @@ def resolve_worker_model(req_model, tool_args, config, state=None):
                 if kw.lower() in combined_text:
                     # Dynamically escalate to Carbon if enabled on deep architecture tasks
                     if rule.get("name") == "deep_architecture_concurrency" and enable_carbon:
-                        return "gemini-4-carbon", "adaptive_carbon_escalation", f"{rule.get('name')}:{kw}"
+                        return "gemini-4-carbon-high", "adaptive_carbon_escalation", f"{rule.get('name')}:{kw}"
                     return target_model, "adaptive_keyword_match", f"{rule.get('name')}:{kw}"
 
         adaptive_default = adaptive_cfg.get("defaultModel", fallback_model)
