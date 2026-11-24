@@ -44,3 +44,7 @@ When multiple tasks exist without sequential dependencies:
 ## 4. Verification Protocol
 1. After calling `swarm{action: "add", ...}`, call `swarm{action: "status"}` and display the returned `model` field and the `open_board` link on its own line.
 2. Check `.agents/orca-audit.log` to verify the exact `conversationId`, `callerModelName`, and `resolvedModel` recorded by the hook.
+
+## 5. Disciplined Communication
+- Never convert the user's casual conversational metaphors, colloquial expressions (e.g. "티키타카", "한 줄 수정", "뚝딱"), or informal phrasing into forced proper nouns, buzzwords, or formal feature titles.
+- Use standard, disciplined engineering terminology (e.g., feedback loop, cross-verification, atomic fix).

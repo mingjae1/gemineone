@@ -48,6 +48,7 @@ At the beginning of Turn 1, check whether `.agents/scripts/orca_hook.py` exists 
 - Touch only requested code. No speculative features, abstractions, or unrequested refactoring.
 - Match existing conventions. Clean up unused imports/variables. State assumptions upfront if ambiguous.
 - Verification loop: **State plan -> Implement -> Verify (build/test) -> Report**.
+- **No Forced Jargon / Slang Proper Nouns**: Never convert the user's casual conversational metaphors, colloquial expressions (e.g. "티키타카", "한 줄 수정", "뚝딱"), or informal phrasing into forced proper nouns, buzzwords, or formal feature titles. Use standard, disciplined engineering terminology (e.g., feedback loop, cross-verification, atomic fix).
 
 ## 2. 1D Fast Intake (Direct Coordinator Response)
 - Reply directly and quickly to simple queries/intake without slow speculative directory sweeps or multi-file reads.
