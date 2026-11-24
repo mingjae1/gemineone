@@ -22,6 +22,42 @@ def load_json(path, default=None):
     return default
 
 
+def save_json(path, data):
+    tmp_path = f"{path}.tmp.{os.getpid()}"
+    try:
+        with open(tmp_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+        os.replace(tmp_path, path)
+    except Exception as e:
+        print(f"[Quota Meter] Error saving {path}: {e}", file=sys.stderr)
+        try:
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+        except OSError:
+            pass
+        raise
+
+
+def set_user_threshold(new_threshold):
+    try:
+        val = int(new_threshold)
+        if not (1 <= val <= 99):
+            raise ValueError("Threshold must be between 1 and 99")
+    except ValueError as e:
+        raise ValueError(f"Invalid threshold '{new_threshold}': must be an integer between 1 and 99") from e
+
+    config = load_json(CONFIG_PATH, {})
+    if "quotaMonitoring" not in config:
+        config["quotaMonitoring"] = {
+            "enabled": True,
+            "dailyTokenBaseline": 5000000,
+            "displayInSummary": True
+        }
+    config["quotaMonitoring"]["lowQuotaThresholdPercent"] = val
+    save_json(CONFIG_PATH, config)
+    return val
+
+
 def get_default_brain_dir():
     user_home = os.environ.get("USERPROFILE", os.path.expanduser("~"))
     return os.path.join(user_home, ".gemini", "antigravity", "brain")
@@ -94,13 +130,27 @@ def compute_today_tokens(brain_dir=None, target_date=None):
     return total_tokens, total_steps
 
 
-def get_quota_telemetry(conv_id=None, brain_dir=None, target_date=None):
+def get_quota_telemetry(conv_id=None, brain_dir=None, target_date=None, threshold_override=None):
     config = load_json(CONFIG_PATH, {})
     state = load_json(STATE_PATH, {})
 
     quota_cfg = config.get("quotaMonitoring", {})
     baseline = quota_cfg.get("dailyTokenBaseline", 5000000)
-    low_thresh = quota_cfg.get("lowQuotaThresholdPercent", 25)
+
+    # Threshold priority:
+    # 1. Explicit runtime parameter override
+    # 2. Environment variable ORCA_LOW_QUOTA_THRESHOLD
+    # 3. User setting in orca-config.json
+    # 4. Default 25%
+    if threshold_override is not None:
+        low_thresh = int(threshold_override)
+    elif os.environ.get("ORCA_LOW_QUOTA_THRESHOLD"):
+        try:
+            low_thresh = int(os.environ.get("ORCA_LOW_QUOTA_THRESHOLD"))
+        except ValueError:
+            low_thresh = quota_cfg.get("lowQuotaThresholdPercent", 25)
+    else:
+        low_thresh = quota_cfg.get("lowQuotaThresholdPercent", 25)
 
     if not conv_id:
         conv_id = state.get("coordinatorConversationId")
@@ -117,7 +167,7 @@ def get_quota_telemetry(conv_id=None, brain_dir=None, target_date=None):
     recommendation = None
     if is_low_quota:
         recommendation = (
-            f"일일 잔여 쿼터가 {remaining_percent}%로 낮습니다. "
+            f"일일 잔여 쿼터({remaining_percent}%)가 사용자 지정 알림 기준({low_thresh}%) 이하입니다. "
             "다음 작업은 gemini-4-neon-low(경량) 또는 GitHub Copilot(0쿼터)으로의 전환을 권장합니다."
         )
 
@@ -139,6 +189,7 @@ def get_quota_telemetry(conv_id=None, brain_dir=None, target_date=None):
 def format_markdown_footer(telemetry):
     rem = telemetry["remainingPercent"]
     is_low = telemetry["isLowQuota"]
+    thresh = telemetry["lowQuotaThreshold"]
     session_t = f"{telemetry['sessionTokens']:,}"
     daily_t = f"{telemetry['dailyTokens']:,}"
     baseline_t = f"{telemetry['dailyBaseline']:,}"
@@ -157,7 +208,7 @@ def format_markdown_footer(telemetry):
     ]
 
     if is_low:
-        lines.append(f"> • ⚠️ **쿼터 주의**: {telemetry['recommendation']}")
+        lines.append(f"> • ⚠️ **쿼터 주의 (사용자 지정 기준: {thresh}% 이하)**: {telemetry['recommendation']}")
 
     return "\n".join(lines)
 
@@ -167,9 +218,20 @@ def main():
     parser.add_argument("--json", action="store_true", help="Output telemetry as JSON")
     parser.add_argument("--markdown", action="store_true", help="Output telemetry as Markdown footer")
     parser.add_argument("--conv-id", type=str, default=None, help="Conversation ID to inspect")
+    parser.add_argument("--threshold", type=int, default=None, help="Temporary threshold percentage override (1-99)")
+    parser.add_argument("--set-threshold", type=int, default=None, help="Persistently set low quota alert threshold (1-99) in orca-config.json")
     args = parser.parse_args()
 
-    telemetry = get_quota_telemetry(conv_id=args.conv_id)
+    if args.set_threshold is not None:
+        try:
+            val = set_user_threshold(args.set_threshold)
+            print(f"[Quota Meter] Successfully updated low quota alert threshold to {val}% in orca-config.json")
+            return
+        except Exception as e:
+            print(f"[Quota Meter] Error: {e}", file=sys.stderr)
+            sys.exit(1)
+
+    telemetry = get_quota_telemetry(conv_id=args.conv_id, threshold_override=args.threshold)
 
     if args.json:
         print(json.dumps(telemetry, indent=2, ensure_ascii=False))
@@ -181,6 +243,7 @@ def main():
         print(f"Today Tokens   : {telemetry['dailyTokens']:,} across {telemetry['totalStepsToday']} steps")
         print(f"Daily Baseline : {telemetry['dailyBaseline']:,}")
         print(f"Remaining      : {telemetry['remainingPercent']}% (Used: {telemetry['usedPercent']}%)")
+        print(f"User Threshold : {telemetry['lowQuotaThreshold']}%")
         print(f"Carbon Active  : {telemetry['hasCarbon']}")
         if telemetry["isLowQuota"]:
             print(f"ALERT: {telemetry['recommendation']}")
