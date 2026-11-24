@@ -44,6 +44,7 @@
 - Touch only requested code. No speculative features, abstractions, or unrequested refactoring.
 - Match existing conventions. Clean up unused imports/variables. State assumptions upfront if ambiguous.
 - Verification loop: State plan -> Implement -> Verify (build/test) -> Report.
+- **Quota Telemetry Footer**: At the conclusion of major swarm task reports, provide real-time resource telemetry via `python .agents/scripts/quota_meter.py --markdown`. When remaining quota is low (<=25%), explicitly alert the user and recommend switching to lightweight models (`gemini-4-neon-low`) or 0-quota offline models.
 - **No Forced Jargon / Slang Proper Nouns**: Never convert the user's casual conversational metaphors, colloquial expressions (e.g. "티키타카", "한 줄 수정", "뚝딱"), or informal phrasing into forced proper nouns, buzzwords, or formal feature titles. Use standard, disciplined engineering terminology (e.g., feedback loop, cross-verification, atomic fix).
 
 ## 2. 1D Direct Chat & Fast Intake (`gemini-3.8-flash-high`)

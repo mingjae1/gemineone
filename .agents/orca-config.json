@@ -5,6 +5,12 @@
   "enableCarbon": false,
   "carbonFallback": "gemini-4-argon-high",
   "defaultTier": "hydrogen-high",
+  "quotaMonitoring": {
+    "enabled": true,
+    "dailyTokenBaseline": 5000000,
+    "lowQuotaThresholdPercent": 25,
+    "displayInSummary": true
+  },
   "adaptiveEffort": {
     "enabled": true,
     "defaultModel": "gemini-4-hydrogen-high",
