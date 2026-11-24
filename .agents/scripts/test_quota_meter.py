@@ -53,63 +53,48 @@ class TestQuotaMeter(unittest.TestCase):
         self.assertEqual(total, 10000)
         self.assertEqual(steps, 3)
 
-    def test_compute_today_tokens(self):
-        total, steps = quota_meter.compute_today_tokens(brain_dir=self.test_dir)
-        self.assertEqual(total, 10000)
-        self.assertEqual(steps, 3)
-
-    def test_quota_telemetry_normal(self):
-        telemetry = quota_meter.get_quota_telemetry(conv_id=self.conv1, brain_dir=self.test_dir, threshold_override=10)
-        self.assertEqual(telemetry["sessionTokens"], 3500)
-        self.assertEqual(telemetry["tokens5h"], 10000)
+    def test_dual_quota_telemetry_normal(self):
+        telemetry = quota_meter.get_dual_quota_telemetry(
+            conv_id=self.conv1,
+            brain_dir=self.test_dir,
+            five_h_override=72.0,
+            weekly_override=93.0
+        )
+        self.assertEqual(telemetry["fiveHourRemainingPercent"], 72.0)
+        self.assertEqual(telemetry["weeklyRemainingPercent"], 93.0)
+        self.assertFalse(telemetry["isLow5h"])
+        self.assertFalse(telemetry["isLowWeekly"])
         self.assertFalse(telemetry["isLowQuota"])
         self.assertIsNone(telemetry["recommendation"])
 
-    def test_user_defined_threshold_override_70_percent(self):
-        # 10,000 tokens against 5,000,000 baseline is 0.2% used -> 99.8% remaining.
-        # If user sets threshold to 99%, 99.8% is NOT <= 99%.
-        # But if tokens used is 1,600,000 (32% used -> 68% remaining) and threshold is 70%:
-        # 68% remaining <= 70% threshold -> should trigger isLowQuota!
-        telemetry = {
-            "conversationId": self.conv1,
-            "sessionTokens": 3500,
-            "tokens5h": 1600000,
-            "steps5h": 50,
-            "baseline5h": 5000000,
-            "usedPercent5h": 32.0,
-            "remainingPercent5h": 68.0,
-            "dailyTokens": 1600000,
-            "totalStepsToday": 50,
-            "dailyBaseline": 5000000,
-            "isLowQuota": True,
-            "lowQuotaThreshold": 70,
-            "hasCarbon": True,
-            "recommendation": "5시간 롤링 잔여 쿼터(68.0%)가 사용자 지정 기준(70%) 이하입니다. 다음 작업은 gemini-4-neon-low(경량) 또는 0쿼터 모델로의 전환을 권장합니다.",
-        }
+    def test_dual_quota_alert_5h_triggered(self):
+        telemetry = quota_meter.get_dual_quota_telemetry(
+            conv_id=self.conv1,
+            brain_dir=self.test_dir,
+            five_h_override=69.0,
+            weekly_override=93.0
+        )
+        self.assertTrue(telemetry["isLow5h"])
+        self.assertFalse(telemetry["isLowWeekly"])
+        self.assertTrue(telemetry["isLowQuota"])
+        self.assertIn("5h Limit(69.0%)이 기준", telemetry["recommendation"])
 
         md = quota_meter.format_markdown_footer(telemetry)
-        self.assertIn("Antigravity Quota & Telemetry", md)
-        self.assertIn("5h 롤링 소모", md)
-        self.assertIn("사용자 지정 기준: 70% 이하", md)
-        self.assertIn("gemini-4-neon-low", md)
+        self.assertIn("Antigravity Dual Quota Telemetry", md)
+        self.assertIn("5h Limit: 69.0%", md)
+        self.assertIn("Weekly Limit: 93.0%", md)
 
-    def test_set_user_threshold_valid_and_invalid(self):
-        old_val = quota_meter.load_json(quota_meter.CONFIG_PATH).get("quotaMonitoring", {}).get("lowQuotaThresholdPercent", 25)
-        try:
-            val = quota_meter.set_user_threshold(70)
-            self.assertEqual(val, 70)
-            cfg = quota_meter.load_json(quota_meter.CONFIG_PATH)
-            self.assertEqual(cfg["quotaMonitoring"]["lowQuotaThresholdPercent"], 70)
-
-            # Test invalid range
-            with self.assertRaises(ValueError):
-                quota_meter.set_user_threshold(150)
-            with self.assertRaises(ValueError):
-                quota_meter.set_user_threshold(0)
-            with self.assertRaises(ValueError):
-                quota_meter.set_user_threshold("invalid")
-        finally:
-            quota_meter.set_user_threshold(old_val)
+    def test_dual_quota_alert_both_triggered(self):
+        telemetry = quota_meter.get_dual_quota_telemetry(
+            conv_id=self.conv1,
+            brain_dir=self.test_dir,
+            five_h_override=65.0,
+            weekly_override=60.0
+        )
+        self.assertTrue(telemetry["isLow5h"])
+        self.assertTrue(telemetry["isLowWeekly"])
+        self.assertTrue(telemetry["isLowQuota"])
+        self.assertIn("모두 기준치", telemetry["recommendation"])
 
 
 if __name__ == "__main__":

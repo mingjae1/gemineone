@@ -9,7 +9,15 @@
     "enabled": true,
     "dailyTokenBaseline": 5000000,
     "lowQuotaThresholdPercent": 70,
-    "displayInSummary": true
+    "displayInSummary": true,
+    "calibratedLimits": {
+      "fiveHourRemainingPercent": 72.0,
+      "weeklyRemainingPercent": 93.0
+    },
+    "thresholds": {
+      "fiveHourLimitPercent": 70,
+      "weeklyLimitPercent": 70
+    }
   },
   "adaptiveEffort": {
     "enabled": true,
