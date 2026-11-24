@@ -50,6 +50,7 @@ def set_user_threshold(new_threshold):
     if "quotaMonitoring" not in config:
         config["quotaMonitoring"] = {
             "enabled": True,
+            "rolling5hTokenBaseline": 5000000,
             "dailyTokenBaseline": 5000000,
             "displayInSummary": True
         }
@@ -88,6 +89,48 @@ def compute_conversation_tokens(conv_id, brain_dir=None):
     except Exception:
         pass
     return total
+
+
+def compute_5h_rolling_tokens(brain_dir=None, now_utc=None):
+    """Computes tokens consumed within the Antigravity 5-hour rolling limit window."""
+    if not brain_dir:
+        brain_dir = get_default_brain_dir()
+    if not os.path.exists(brain_dir):
+        return 0, 0
+
+    if now_utc is None:
+        now_utc = datetime.datetime.now(datetime.timezone.utc)
+    five_hours_ago = now_utc - datetime.timedelta(hours=5)
+
+    total_tokens = 0
+    total_steps = 0
+
+    try:
+        brain_path = pathlib.Path(brain_dir)
+        for p in brain_path.glob("*/.system_generated/logs/transcript.jsonl"):
+            try:
+                mtime = datetime.datetime.fromtimestamp(p.stat().st_mtime, datetime.timezone.utc)
+                if mtime < five_hours_ago:
+                    continue
+                with open(p, "r", encoding="utf-8", errors="replace") as f:
+                    for line in f:
+                        if not line.strip():
+                            continue
+                        try:
+                            d = json.loads(line)
+                            inp = d.get("input_tokens", 0) or 0
+                            out = d.get("output_tokens", 0) or 0
+                            if inp or out:
+                                total_tokens += (inp + out)
+                                total_steps += 1
+                        except Exception:
+                            pass
+            except Exception:
+                continue
+    except Exception:
+        pass
+
+    return total_tokens, total_steps
 
 
 def compute_today_tokens(brain_dir=None, target_date=None):
@@ -130,12 +173,13 @@ def compute_today_tokens(brain_dir=None, target_date=None):
     return total_tokens, total_steps
 
 
-def get_quota_telemetry(conv_id=None, brain_dir=None, target_date=None, threshold_override=None):
+def get_quota_telemetry(conv_id=None, brain_dir=None, target_date=None, now_utc=None, threshold_override=None):
     config = load_json(CONFIG_PATH, {})
     state = load_json(STATE_PATH, {})
 
     quota_cfg = config.get("quotaMonitoring", {})
-    baseline = quota_cfg.get("dailyTokenBaseline", 5000000)
+    baseline_5h = quota_cfg.get("rolling5hTokenBaseline", quota_cfg.get("dailyTokenBaseline", 5000000))
+    daily_baseline = quota_cfg.get("dailyTokenBaseline", 5000000)
 
     # Threshold priority:
     # 1. Explicit runtime parameter override
@@ -156,29 +200,34 @@ def get_quota_telemetry(conv_id=None, brain_dir=None, target_date=None, threshol
         conv_id = state.get("coordinatorConversationId")
 
     session_tokens = compute_conversation_tokens(conv_id, brain_dir)
+    tokens_5h, steps_5h = compute_5h_rolling_tokens(brain_dir, now_utc)
     daily_tokens, total_steps = compute_today_tokens(brain_dir, target_date)
 
-    used_percent = round((daily_tokens / baseline) * 100, 1) if baseline > 0 else 0.0
-    remaining_percent = max(0.0, round(100.0 - used_percent, 1))
-    is_low_quota = remaining_percent <= low_thresh
+    # Compute 5h rolling metrics (primary rate limit window in Antigravity)
+    used_percent_5h = round((tokens_5h / baseline_5h) * 100, 1) if baseline_5h > 0 else 0.0
+    remaining_percent_5h = max(0.0, round(100.0 - used_percent_5h, 1))
+    is_low_quota = remaining_percent_5h <= low_thresh
 
     has_carbon = state.get("hasCarbon", False) or config.get("enableCarbon", False)
 
     recommendation = None
     if is_low_quota:
         recommendation = (
-            f"일일 잔여 쿼터({remaining_percent}%)가 사용자 지정 알림 기준({low_thresh}%) 이하입니다. "
-            "다음 작업은 gemini-4-neon-low(경량) 또는 GitHub Copilot(0쿼터)으로의 전환을 권장합니다."
+            f"5시간 롤링 잔여 쿼터({remaining_percent_5h}%)가 사용자 지정 기준({low_thresh}%) 이하입니다. "
+            "다음 작업은 gemini-4-neon-low(경량) 또는 0쿼터 모델로의 전환을 권장합니다."
         )
 
     return {
         "conversationId": conv_id,
         "sessionTokens": session_tokens,
+        "tokens5h": tokens_5h,
+        "steps5h": steps_5h,
+        "baseline5h": baseline_5h,
+        "usedPercent5h": used_percent_5h,
+        "remainingPercent5h": remaining_percent_5h,
         "dailyTokens": daily_tokens,
         "totalStepsToday": total_steps,
-        "dailyBaseline": baseline,
-        "usedPercent": used_percent,
-        "remainingPercent": remaining_percent,
+        "dailyBaseline": daily_baseline,
         "isLowQuota": is_low_quota,
         "lowQuotaThreshold": low_thresh,
         "hasCarbon": has_carbon,
@@ -187,12 +236,12 @@ def get_quota_telemetry(conv_id=None, brain_dir=None, target_date=None, threshol
 
 
 def format_markdown_footer(telemetry):
-    rem = telemetry["remainingPercent"]
+    rem = telemetry["remainingPercent5h"]
     is_low = telemetry["isLowQuota"]
     thresh = telemetry["lowQuotaThreshold"]
     session_t = f"{telemetry['sessionTokens']:,}"
-    daily_t = f"{telemetry['dailyTokens']:,}"
-    baseline_t = f"{telemetry['dailyBaseline']:,}"
+    tokens_5h_t = f"{telemetry['tokens5h']:,}"
+    baseline_5h_t = f"{telemetry['baseline5h']:,}"
 
     # Visual progress bar (15 blocks)
     total_blocks = 15
@@ -203,8 +252,8 @@ def format_markdown_footer(telemetry):
     lines = [
         "---",
         "> [!NOTE] **Antigravity Quota & Telemetry**",
-        f"> • **세션 소모**: `{session_t}` tokens | **오늘 누적**: `{daily_t}` / `{baseline_t}` ({telemetry['usedPercent']}%)",
-        f"> • **잔여 쿼터**: `[{bar}]` **{rem}%** | **Carbon 플래그십**: `{'활성 (Active)' if telemetry['hasCarbon'] else '미가용'}`",
+        f"> • **5h 롤링 소모**: `{tokens_5h_t}` / `{baseline_5h_t}` ({telemetry['usedPercent5h']}%) | **세션**: `{session_t}` tokens",
+        f"> • **5h 잔여 쿼터**: `[{bar}]` **{rem}%** | **Carbon 플래그십**: `{'활성 (Active)' if telemetry['hasCarbon'] else '미가용'}`",
     ]
 
     if is_low:
@@ -238,11 +287,11 @@ def main():
     elif args.markdown:
         print(format_markdown_footer(telemetry))
     else:
-        print("=== Antigravity Quota Telemetry ===")
+        print("=== Antigravity Quota Telemetry (5h Rolling Window) ===")
         print(f"Session Tokens : {telemetry['sessionTokens']:,}")
+        print(f"5h Tokens      : {telemetry['tokens5h']:,} across {telemetry['steps5h']} steps ({telemetry['usedPercent5h']}%)")
+        print(f"5h Remaining   : {telemetry['remainingPercent5h']}% (Baseline: {telemetry['baseline5h']:,})")
         print(f"Today Tokens   : {telemetry['dailyTokens']:,} across {telemetry['totalStepsToday']} steps")
-        print(f"Daily Baseline : {telemetry['dailyBaseline']:,}")
-        print(f"Remaining      : {telemetry['remainingPercent']}% (Used: {telemetry['usedPercent']}%)")
         print(f"User Threshold : {telemetry['lowQuotaThreshold']}%")
         print(f"Carbon Active  : {telemetry['hasCarbon']}")
         if telemetry["isLowQuota"]:
