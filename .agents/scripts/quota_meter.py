@@ -43,6 +43,24 @@ def get_default_brain_dir():
     return os.path.join(user_home, ".gemini", "antigravity", "brain")
 
 
+def find_latest_conversation_id(brain_dir=None):
+    if not brain_dir:
+        brain_dir = get_default_brain_dir()
+    if not os.path.exists(brain_dir):
+        return None
+    latest_id = None
+    latest_mtime = 0.0
+    for p in pathlib.Path(brain_dir).glob("*/.system_generated/logs/transcript.jsonl"):
+        try:
+            m = p.stat().st_mtime
+            if m > latest_mtime:
+                latest_mtime = m
+                latest_id = p.parent.parent.parent.name
+        except Exception:
+            pass
+    return latest_id
+
+
 def compute_conversation_tokens(conv_id, brain_dir=None):
     if not conv_id:
         return 0
@@ -96,6 +114,56 @@ def compute_5h_rolling_tokens(brain_dir=None, now_utc=None):
                             continue
                         try:
                             d = json.loads(line)
+                            ts_str = d.get("created_at")
+                            if ts_str:
+                                ts = datetime.datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
+                                if ts < five_hours_ago:
+                                    continue
+                            inp = d.get("input_tokens", 0) or 0
+                            out = d.get("output_tokens", 0) or 0
+                            if inp or out:
+                                total_tokens += (inp + out)
+                                total_steps += 1
+                        except Exception:
+                            pass
+            except Exception:
+                continue
+    except Exception:
+        pass
+
+    return total_tokens, total_steps
+
+
+def compute_today_tokens(brain_dir=None, target_date=None):
+    if not brain_dir:
+        brain_dir = get_default_brain_dir()
+    if not os.path.exists(brain_dir):
+        return 0, 0
+
+    if target_date is None:
+        target_date = datetime.datetime.now(datetime.timezone.utc).date()
+
+    total_tokens = 0
+    total_steps = 0
+
+    try:
+        brain_path = pathlib.Path(brain_dir)
+        for p in brain_path.glob("*/.system_generated/logs/transcript.jsonl"):
+            try:
+                mtime = datetime.datetime.fromtimestamp(p.stat().st_mtime, datetime.timezone.utc).date()
+                if mtime < target_date:
+                    continue
+                with open(p, "r", encoding="utf-8", errors="replace") as f:
+                    for line in f:
+                        if not line.strip():
+                            continue
+                        try:
+                            d = json.loads(line)
+                            ts_str = d.get("created_at")
+                            if ts_str:
+                                ts = datetime.datetime.fromisoformat(ts_str.replace("Z", "+00:00")).date()
+                                if ts != target_date:
+                                    continue
                             inp = d.get("input_tokens", 0) or 0
                             out = d.get("output_tokens", 0) or 0
                             if inp or out:
@@ -121,15 +189,14 @@ def get_dual_quota_telemetry(conv_id=None, brain_dir=None, now_utc=None, five_h_
     th_weekly = thresholds.get("weeklyLimitPercent", quota_cfg.get("lowQuotaThresholdPercent", 70))
 
     calibrated = quota_cfg.get("calibratedLimits", {})
-    base_5h = calibrated.get("fiveHourRemainingPercent", 73.0)
-    base_weekly = calibrated.get("weeklyRemainingPercent", 85.0)
+    base_5h = calibrated.get("fiveHourRemainingPercent", 72.0)
+    base_weekly = calibrated.get("weeklyRemainingPercent", 93.0)
 
-    # Runtime overrides take precedence
     rem_5h = float(five_h_override) if five_h_override is not None else float(base_5h)
     rem_weekly = float(weekly_override) if weekly_override is not None else float(base_weekly)
 
     if not conv_id:
-        conv_id = state.get("coordinatorConversationId")
+        conv_id = find_latest_conversation_id(brain_dir) or state.get("coordinatorConversationId")
 
     session_tokens = compute_conversation_tokens(conv_id, brain_dir)
     tokens_5h, steps_5h = compute_5h_rolling_tokens(brain_dir, now_utc)
@@ -143,17 +210,17 @@ def get_dual_quota_telemetry(conv_id=None, brain_dir=None, now_utc=None, five_h_
     recommendation = None
     if is_low_5h and is_low_weekly:
         recommendation = (
-            f"5h Limit({rem_5h}%)과 Weekly Limit({rem_weekly}%)이 모두 기준치({th_5h}%) 이하입니다. "
+            f"5h Limit({rem_5h:.1f}%)과 Weekly Limit({rem_weekly:.1f}%)이 모두 기준치({th_5h}%) 이하입니다. "
             "즉시 gemini-4-neon-low(경량) 또는 0쿼터 모델로 전환하여 사용량을 보존하세요."
         )
     elif is_low_5h:
         recommendation = (
-            f"5h Limit({rem_5h}%)이 기준({th_5h}% 이하)에 도달했습니다. "
+            f"5h Limit({rem_5h:.1f}%)이 기준({th_5h}% 이하)에 도달했습니다. "
             "슬라이딩 윈도우 회복 전까지 1~2시간 동안 경량 모델(gemini-4-neon-low) 사용을 권장합니다."
         )
     elif is_low_weekly:
         recommendation = (
-            f"Weekly Limit({rem_weekly}%)이 기준({th_weekly}% 이하)에 도달했습니다. "
+            f"Weekly Limit({rem_weekly:.1f}%)이 기준({th_weekly}% 이하)에 도달했습니다. "
             "이번 주 남은 일정을 위해 Carbon/Argon 고사양 모델 호출을 자제하고 표준 티어를 권장합니다."
         )
 
@@ -189,13 +256,14 @@ def format_markdown_footer(telemetry):
     bar_w = make_bar(p_w)
 
     session_t = f"{telemetry['sessionTokens']:,}"
+    rolling_5h_t = f"{telemetry['tokens5h']:,}"
 
     lines = [
         "---",
         "> [!NOTE] **Antigravity Dual Quota Telemetry**",
-        f"> • **5h Limit (단기 롤링)**  : `[{bar_5h}]` **{p_5h:.1f}%** (기준: {th_5h}% 이하 시 경고) | 세션: `{session_t}` tokens",
-        f"> • **Weekly Limit (주간 총량)**: `[{bar_w}]` **{p_w:.1f}%** (기준: {th_w}% 이하 시 경고)",
-        f"> • **Carbon 플래그십**        : `{'활성 (Active)' if telemetry['hasCarbon'] else '미가용'}`",
+        f"> • **5h Limit (단기 롤링)**  : `[{bar_5h}]` **{p_5h:.1f}%** (기준: {th_5h}% 이하 시 경고) | 최근 5시간: `{rolling_5h_t}` tokens",
+        f"> • **Weekly Limit (주간 총량)**: `[{bar_w}]` **{p_w:.1f}%** (기준: {th_w}% 이하 시 경고) | 세션 누적: `{session_t}` tokens",
+        f"> • **Carbon 플래그십**        : `{'활성 (Active - 전면 개방)' if telemetry['hasCarbon'] else '미가용'}`",
     ]
 
     if telemetry["isLowQuota"]:
@@ -267,6 +335,7 @@ def main():
         print("=== Antigravity Dual Quota Telemetry ===")
         print(f"5h Limit Remaining     : {telemetry['fiveHourRemainingPercent']}% (Threshold: {telemetry['fiveHourThreshold']}%)")
         print(f"Weekly Limit Remaining : {telemetry['weeklyRemainingPercent']}% (Threshold: {telemetry['weeklyThreshold']}%)")
+        print(f"Recent 5h Tokens       : {telemetry['tokens5h']:,} across {telemetry['steps5h']} steps")
         print(f"Session Tokens         : {telemetry['sessionTokens']:,}")
         print(f"Low Quota Alert Active : {telemetry['isLowQuota']}")
         if telemetry["isLowQuota"]:
