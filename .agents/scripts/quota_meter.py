@@ -282,6 +282,49 @@ def get_external_providers():
     else:
         providers["codex"] = {"installed": False}
 
+    # 3. GitHub Copilot CLI
+    copilot_bin = shutil.which("copilot") or shutil.which("copilot.cmd")
+    if copilot_bin:
+        user_home = os.environ.get("USERPROFILE", os.path.expanduser("~"))
+        copilot_dir = os.path.join(user_home, ".copilot")
+        cfg_path = os.path.join(copilot_dir, "config.json")
+        db_path = os.path.join(copilot_dir, "session-store.db")
+        cp_user = None
+        if os.path.exists(cfg_path):
+            try:
+                with open(cfg_path, "r", encoding="utf-8") as f:
+                    content = "".join(l for l in f if not l.strip().startswith("//"))
+                    d = json.loads(content)
+                    cp_user = d.get("lastLoggedInUser", {}).get("login")
+            except Exception:
+                pass
+
+        cp_tokens = 0
+        cp_credits = 0.0
+        if os.path.exists(db_path):
+            try:
+                import sqlite3
+                conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+                cur = conn.cursor()
+                cur.execute("SELECT SUM(input_tokens + output_tokens), SUM(total_nano_aiu) FROM assistant_usage_events;")
+                row = cur.fetchone()
+                conn.close()
+                if row and row[0]:
+                    cp_tokens = int(row[0])
+                    cp_credits = round((row[1] or 0) / 1e9, 3)
+            except Exception:
+                pass
+
+        providers["copilot"] = {
+            "installed": True,
+            "loggedIn": bool(cp_user),
+            "user": cp_user or "unknown",
+            "tokens": cp_tokens,
+            "credits": cp_credits,
+        }
+    else:
+        providers["copilot"] = {"installed": False}
+
     return providers
 
 
@@ -531,8 +574,13 @@ def format_markdown_footer(telemetry):
     ext = telemetry.get("externalProviders", {})
     claude_info = ext.get("claude", {})
     codex_info = ext.get("codex", {})
+    copilot_info = ext.get("copilot", {})
 
     ext_parts = []
+    if copilot_info.get("loggedIn"):
+        cp_user = copilot_info.get("user", "")
+        cp_cred = copilot_info.get("credits", 0.0)
+        ext_parts.append(f"Copilot ({cp_user} · {cp_cred} AIC)")
     if claude_info.get("loggedIn"):
         c_plan = claude_info.get("plan", "pro").upper()
         c_quota = f" · 3P 쿼터: {telemetry['claudeGptWeeklyPercent']:.1f}%" if telemetry.get("claudeGptWeeklyPercent") is not None else ""
@@ -628,6 +676,10 @@ def main():
         print(f"주간 한도   : {telemetry['weeklyRemainingPercent']}% (리셋: {reset_w_str or '정보 없음'}) | 세션: {telemetry['sessionTokens']:,} tokens")
         ext = telemetry.get("externalProviders", {})
         ext_parts = []
+        if ext.get("copilot", {}).get("loggedIn"):
+            cp_user = ext['copilot'].get('user', '')
+            cp_cred = ext['copilot'].get('credits', 0.0)
+            ext_parts.append(f"Copilot ({cp_user} · {cp_cred} AIC)")
         if ext.get("claude", {}).get("loggedIn"):
             c_plan = ext['claude'].get('plan', 'pro').upper()
             c_quota = f" · 3P 쿼터: {telemetry['claudeGptWeeklyPercent']:.1f}%" if telemetry.get("claudeGptWeeklyPercent") is not None else ""

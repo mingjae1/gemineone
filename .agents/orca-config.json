@@ -11,8 +11,8 @@
     "lowQuotaThresholdPercent": 70,
     "displayInSummary": true,
     "calibratedLimits": {
-      "fiveHourRemainingPercent": 88.3,
-      "weeklyRemainingPercent": 88.3
+      "fiveHourRemainingPercent": 84.8,
+      "weeklyRemainingPercent": 87.4
     },
     "thresholds": {
       "fiveHourLimitPercent": 70,
