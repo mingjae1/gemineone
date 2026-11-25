@@ -183,6 +183,62 @@ def compute_conversation_tokens(conv_id, brain_dir=None):
     return total
 
 
+def get_default_db_path():
+    user_home = os.environ.get("USERPROFILE", os.path.expanduser("~"))
+    return os.path.join(user_home, ".gemini", "antigravity", "conversation_summaries.db")
+
+
+def get_agent_breakdown(conv_id, brain_dir=None, db_path=None):
+    if not conv_id:
+        return []
+    if not brain_dir:
+        brain_dir = get_default_brain_dir()
+    if not db_path:
+        db_path = get_default_db_path()
+
+    state = load_json(STATE_PATH, {})
+    worker_models = state.get("workerConversations", {})
+
+    breakdown = []
+    coord_tokens = compute_conversation_tokens(conv_id, brain_dir)
+    breakdown.append({
+        "name": "coordinator",
+        "conversationId": conv_id,
+        "tokens": coord_tokens,
+        "model": "gemini-3.8-flash-high",
+        "isCoordinator": True,
+    })
+
+    if not os.path.exists(db_path):
+        return breakdown
+
+    try:
+        import sqlite3
+        conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT conversation_id, agent_name FROM conversation_summaries WHERE parent_conversation_id = ?;",
+            (conv_id,),
+        )
+        rows = cur.fetchall()
+        conn.close()
+
+        for wid, wname in rows:
+            wtokens = compute_conversation_tokens(wid, brain_dir)
+            wmodel = worker_models.get(wid, "adaptive-worker")
+            breakdown.append({
+                "name": wname or "worker",
+                "conversationId": wid,
+                "tokens": wtokens,
+                "model": wmodel,
+                "isCoordinator": False,
+            })
+    except Exception:
+        pass
+
+    return breakdown
+
+
 def compute_5h_rolling_tokens(brain_dir=None, now_utc=None):
     if not brain_dir:
         brain_dir = get_default_brain_dir()
@@ -365,6 +421,7 @@ def get_dual_quota_telemetry(conv_id=None, brain_dir=None, now_utc=None, five_h_
         "hasCarbon": has_carbon,
         "recommendation": recommendation,
         "quotaSource": quota_source,
+        "agentBreakdown": get_agent_breakdown(conv_id, brain_dir),
     }
 
     if live_quota:
@@ -423,6 +480,18 @@ def format_markdown_footer(telemetry):
         f"> • **5시간 한도** : `[{bar_5h}]` **{p_5h:.1f}%**{reset_5h_part} · 최근 5h `{rolling_5h_t}` tokens",
         f"> • **주간 한도**   : `[{bar_w}]` **{p_w:.1f}%**{reset_w_part} · 세션 `{session_t}` tokens",
     ]
+
+    agents = telemetry.get("agentBreakdown", [])
+    if len(agents) > 1:
+        def fmt_t(n):
+            if n >= 1_000_000:
+                return f"{n/1_000_000:.1f}M"
+            elif n >= 1_000:
+                return f"{n/1_000:.1f}K"
+            return str(n)
+
+        agent_items = [f"{a['name']} ({fmt_t(a['tokens'])})" for a in agents]
+        lines.append(f"> • **에이전트별**  : {' · '.join(agent_items)}")
 
     if telemetry["isLowQuota"]:
         lines.append(f"> • ⚠️ **쿼터 주의 (5시간 한도: {p_5h:.1f}%, 주간 한도: {p_w:.1f}%)**: {telemetry['recommendation']}")
@@ -495,6 +564,9 @@ def main():
         print(f"=== 쿼터 현황 (기준: {telemetry['fiveHourThreshold']}%) ===")
         print(f"5시간 한도 : {telemetry['fiveHourRemainingPercent']}% (리셋: {reset_5h_str or '정보 없음'}) | 최근 5h: {telemetry['tokens5h']:,} tokens")
         print(f"주간 한도   : {telemetry['weeklyRemainingPercent']}% (리셋: {reset_w_str or '정보 없음'}) | 세션: {telemetry['sessionTokens']:,} tokens")
+        agents = telemetry.get("agentBreakdown", [])
+        if len(agents) > 1:
+            print("에이전트별 : " + " · ".join(f"{a['name']} ({a['tokens']:,}t)" for a in agents))
         if telemetry["isLowQuota"]:
             print(f"⚠️ 쿼터 주의 : {telemetry['recommendation']}")
         else:
