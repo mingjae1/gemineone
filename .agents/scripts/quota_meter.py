@@ -128,8 +128,10 @@ def fetch_live_antigravity_quota(daemon_dir=None, timeout=2):
                                 pct = round(frac * 100.0, 1)
                                 if win == "weekly" or "weekly" in bid:
                                     result["claudeGptWeeklyPercent"] = pct
+                                    result["reset3pWeekly"] = b.get("resetTime")
                                 elif win == "5h" or "5h" in bid:
                                     result["claudeGpt5hPercent"] = pct
+                                    result["reset3p5h"] = b.get("resetTime")
 
                     if result["fiveHourRemainingPercent"] is not None and result["weeklyRemainingPercent"] is not None:
                         return result
@@ -237,6 +239,50 @@ def get_agent_breakdown(conv_id, brain_dir=None, db_path=None):
         pass
 
     return breakdown
+
+
+def get_external_providers():
+    providers = {}
+    import shutil
+    import subprocess
+
+    # 1. Claude Code CLI
+    claude_bin = shutil.which("claude")
+    if claude_bin:
+        try:
+            r = subprocess.run([claude_bin, "auth", "status"], capture_output=True, text=True, timeout=2)
+            if r.returncode == 0:
+                d = json.loads(r.stdout)
+                providers["claude"] = {
+                    "installed": True,
+                    "loggedIn": d.get("loggedIn", False),
+                    "plan": d.get("subscriptionType", "free"),
+                    "email": d.get("email"),
+                }
+            else:
+                providers["claude"] = {"installed": True, "loggedIn": False}
+        except Exception:
+            providers["claude"] = {"installed": True, "loggedIn": False}
+    else:
+        providers["claude"] = {"installed": False}
+
+    # 2. OpenAI Codex CLI
+    codex_bin = shutil.which("codex") or shutil.which("codex.cmd")
+    if codex_bin:
+        try:
+            r = subprocess.run([codex_bin, "login", "status"], capture_output=True, text=True, timeout=2, shell=True)
+            out = (r.stdout + r.stderr).strip()
+            providers["codex"] = {
+                "installed": True,
+                "loggedIn": "Logged in" in out,
+                "status": out,
+            }
+        except Exception:
+            providers["codex"] = {"installed": True, "loggedIn": False}
+    else:
+        providers["codex"] = {"installed": False}
+
+    return providers
 
 
 def compute_5h_rolling_tokens(brain_dir=None, now_utc=None):
@@ -422,6 +468,7 @@ def get_dual_quota_telemetry(conv_id=None, brain_dir=None, now_utc=None, five_h_
         "recommendation": recommendation,
         "quotaSource": quota_source,
         "agentBreakdown": get_agent_breakdown(conv_id, brain_dir),
+        "externalProviders": get_external_providers(),
     }
 
     if live_quota:
@@ -477,9 +524,24 @@ def format_markdown_footer(telemetry):
     lines = [
         "---",
         "> [!NOTE] **쿼터 현황**",
-        f"> • **5시간 한도** : `[{bar_5h}]` **{p_5h:.1f}%**{reset_5h_part} · 최근 5h `{rolling_5h_t}` tokens",
-        f"> • **주간 한도**   : `[{bar_w}]` **{p_w:.1f}%**{reset_w_part} · 세션 `{session_t}` tokens",
+        f"> • **5시간 한도**   : `[{bar_5h}]` **{p_5h:.1f}%**{reset_5h_part} · 최근 5h `{rolling_5h_t}` tokens",
+        f"> • **주간 한도**     : `[{bar_w}]` **{p_w:.1f}%**{reset_w_part} · 세션 `{session_t}` tokens",
     ]
+
+    ext = telemetry.get("externalProviders", {})
+    claude_info = ext.get("claude", {})
+    codex_info = ext.get("codex", {})
+
+    ext_parts = []
+    if claude_info.get("loggedIn"):
+        c_plan = claude_info.get("plan", "pro").upper()
+        c_quota = f" · 3P 쿼터: {telemetry['claudeGptWeeklyPercent']:.1f}%" if telemetry.get("claudeGptWeeklyPercent") is not None else ""
+        ext_parts.append(f"Claude ({c_plan}{c_quota})")
+    if codex_info.get("loggedIn"):
+        ext_parts.append("Codex (ChatGPT 연동)")
+
+    if ext_parts:
+        lines.append(f"> • **연결된 외부 AI** : {' · '.join(ext_parts)}")
 
     agents = telemetry.get("agentBreakdown", [])
     if len(agents) > 1:
@@ -491,7 +553,7 @@ def format_markdown_footer(telemetry):
             return str(n)
 
         agent_items = [f"{a['name']} ({fmt_t(a['tokens'])})" for a in agents]
-        lines.append(f"> • **에이전트별**  : {' · '.join(agent_items)}")
+        lines.append(f"> • **에이전트별**    : {' · '.join(agent_items)}")
 
     if telemetry["isLowQuota"]:
         lines.append(f"> • ⚠️ **쿼터 주의 (5시간 한도: {p_5h:.1f}%, 주간 한도: {p_w:.1f}%)**: {telemetry['recommendation']}")
@@ -564,6 +626,16 @@ def main():
         print(f"=== 쿼터 현황 (기준: {telemetry['fiveHourThreshold']}%) ===")
         print(f"5시간 한도 : {telemetry['fiveHourRemainingPercent']}% (리셋: {reset_5h_str or '정보 없음'}) | 최근 5h: {telemetry['tokens5h']:,} tokens")
         print(f"주간 한도   : {telemetry['weeklyRemainingPercent']}% (리셋: {reset_w_str or '정보 없음'}) | 세션: {telemetry['sessionTokens']:,} tokens")
+        ext = telemetry.get("externalProviders", {})
+        ext_parts = []
+        if ext.get("claude", {}).get("loggedIn"):
+            c_plan = ext['claude'].get('plan', 'pro').upper()
+            c_quota = f" · 3P 쿼터: {telemetry['claudeGptWeeklyPercent']:.1f}%" if telemetry.get("claudeGptWeeklyPercent") is not None else ""
+            ext_parts.append(f"Claude ({c_plan}{c_quota})")
+        if ext.get("codex", {}).get("loggedIn"):
+            ext_parts.append("Codex (ChatGPT 연동)")
+        if ext_parts:
+            print("외부 AI 연동: " + " · ".join(ext_parts))
         agents = telemetry.get("agentBreakdown", [])
         if len(agents) > 1:
             print("에이전트별 : " + " · ".join(f"{a['name']} ({a['tokens']:,}t)" for a in agents))
