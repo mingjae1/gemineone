@@ -80,9 +80,9 @@ class TestQuotaMeter(unittest.TestCase):
         self.assertIn("5h Limit(69.0%)이 기준", telemetry["recommendation"])
 
         md = quota_meter.format_markdown_footer(telemetry)
-        self.assertIn("Antigravity Dual Quota Telemetry", md)
-        self.assertIn("5h Limit: 69.0%", md)
-        self.assertIn("Weekly Limit: 93.0%", md)
+        self.assertIn("쿼터 현황", md)
+        self.assertIn("5시간 한도: 69.0%", md)
+        self.assertIn("주간 한도: 93.0%", md)
 
     def test_dual_quota_alert_both_triggered(self):
         telemetry = quota_meter.get_dual_quota_telemetry(
@@ -113,6 +113,12 @@ class TestQuotaMeter(unittest.TestCase):
         self.assertEqual(telemetry["quotaSource"], "calibrated_fallback")
         self.assertIsNotNone(telemetry["fiveHourRemainingPercent"])
         self.assertIsNotNone(telemetry["weeklyRemainingPercent"])
+
+    def test_format_local_time(self):
+        res_empty = quota_meter.format_local_time("")
+        self.assertEqual(res_empty, "")
+        res_iso = quota_meter.format_local_time("2026-11-25T06:34:05Z")
+        self.assertTrue(len(res_iso) > 0)
 
 
 if __name__ == "__main__":

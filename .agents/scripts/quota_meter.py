@@ -370,12 +370,30 @@ def get_dual_quota_telemetry(conv_id=None, brain_dir=None, now_utc=None, five_h_
     if live_quota:
         res["reset5h"] = live_quota.get("reset5h")
         res["resetWeekly"] = live_quota.get("resetWeekly")
+        res["reset5hLocal"] = format_local_time(live_quota.get("reset5h"))
+        res["resetWeeklyLocal"] = format_local_time(live_quota.get("resetWeekly"))
         res["desc5h"] = live_quota.get("desc5h")
         res["descWeekly"] = live_quota.get("descWeekly")
         res["claudeGptWeeklyPercent"] = live_quota.get("claudeGptWeeklyPercent")
         res["claudeGpt5hPercent"] = live_quota.get("claudeGpt5hPercent")
 
     return res
+
+
+def format_local_time(iso_utc_str):
+    if not iso_utc_str:
+        return ""
+    try:
+        dt = datetime.datetime.fromisoformat(iso_utc_str.replace("Z", "+00:00")).astimezone()
+        now = datetime.datetime.now(dt.tzinfo)
+        if dt.date() == now.date():
+            return f"오늘 {dt.strftime('%H:%M')}"
+        elif dt.date() == (now + datetime.timedelta(days=1)).date():
+            return f"내일 {dt.strftime('%H:%M')}"
+        else:
+            return dt.strftime("%m/%d %H:%M")
+    except Exception:
+        return iso_utc_str
 
 
 def make_bar(percent, total_blocks=15):
@@ -387,33 +405,27 @@ def make_bar(percent, total_blocks=15):
 def format_markdown_footer(telemetry):
     p_5h = telemetry["fiveHourRemainingPercent"]
     p_w = telemetry["weeklyRemainingPercent"]
-    th_5h = telemetry["fiveHourThreshold"]
-    th_w = telemetry["weeklyThreshold"]
     bar_5h = make_bar(p_5h)
     bar_w = make_bar(p_w)
 
     session_t = f"{telemetry['sessionTokens']:,}"
     rolling_5h_t = f"{telemetry['tokens5h']:,}"
-    source_label = "실시간 Hub API 연동" if telemetry.get("quotaSource") == "live_hub_api" else "로컬 캐시 기준"
+
+    reset_5h_str = format_local_time(telemetry.get("reset5h"))
+    reset_w_str = format_local_time(telemetry.get("resetWeekly"))
+
+    reset_5h_part = f" (리셋: {reset_5h_str})" if reset_5h_str else ""
+    reset_w_part = f" (리셋: {reset_w_str})" if reset_w_str else ""
 
     lines = [
         "---",
-        f"> [!NOTE] **Antigravity Dual Quota Telemetry** `[{source_label}]`",
-        f"> • **5h Limit (단기 롤링)**  : `[{bar_5h}]` **{p_5h:.1f}%** (기준: {th_5h}% 이하 시 경고) | 최근 5시간: `{rolling_5h_t}` tokens",
-        f"> • **Weekly Limit (주간 총량)**: `[{bar_w}]` **{p_w:.1f}%** (기준: {th_w}% 이하 시 경고) | 세션 누적: `{session_t}` tokens",
-        f"> • **Carbon 플래그십**        : `{'활성 (Active - 전면 개방)' if telemetry['hasCarbon'] else '미가용'}`",
+        "> [!NOTE] **쿼터 현황**",
+        f"> • **5시간 한도** : `[{bar_5h}]` **{p_5h:.1f}%**{reset_5h_part} · 최근 5h `{rolling_5h_t}` tokens",
+        f"> • **주간 한도**   : `[{bar_w}]` **{p_w:.1f}%**{reset_w_part} · 세션 `{session_t}` tokens",
     ]
 
-    if telemetry.get("reset5h") or telemetry.get("resetWeekly"):
-        parts = []
-        if telemetry.get("reset5h"):
-            parts.append(f"5h 리셋: `{telemetry['reset5h']}`")
-        if telemetry.get("resetWeekly"):
-            parts.append(f"주간 리셋: `{telemetry['resetWeekly']}`")
-        lines.append(f"> • **리셋 시각 (UTC)**       : {' | '.join(parts)}")
-
     if telemetry["isLowQuota"]:
-        lines.append(f"> • ⚠️ **쿼터 주의 (5h Limit: {p_5h:.1f}%, Weekly Limit: {p_w:.1f}%)**: {telemetry['recommendation']}")
+        lines.append(f"> • ⚠️ **쿼터 주의 (5시간 한도: {p_5h:.1f}%, 주간 한도: {p_w:.1f}%)**: {telemetry['recommendation']}")
 
     return "\n".join(lines)
 
@@ -478,19 +490,15 @@ def main():
     elif args.markdown:
         print(format_markdown_footer(telemetry))
     else:
-        print("=== Antigravity Dual Quota Telemetry ===")
-        print(f"Quota Source           : {telemetry.get('quotaSource')}")
-        print(f"5h Limit Remaining     : {telemetry['fiveHourRemainingPercent']}% (Threshold: {telemetry['fiveHourThreshold']}%)")
-        print(f"Weekly Limit Remaining : {telemetry['weeklyRemainingPercent']}% (Threshold: {telemetry['weeklyThreshold']}%)")
-        if telemetry.get("reset5h"):
-            print(f"5h Reset Time (UTC)    : {telemetry.get('reset5h')}")
-        if telemetry.get("resetWeekly"):
-            print(f"Weekly Reset Time (UTC): {telemetry.get('resetWeekly')}")
-        print(f"Recent 5h Tokens       : {telemetry['tokens5h']:,} across {telemetry['steps5h']} steps")
-        print(f"Session Tokens         : {telemetry['sessionTokens']:,}")
-        print(f"Low Quota Alert Active : {telemetry['isLowQuota']}")
+        reset_5h_str = format_local_time(telemetry.get("reset5h"))
+        reset_w_str = format_local_time(telemetry.get("resetWeekly"))
+        print(f"=== 쿼터 현황 (기준: {telemetry['fiveHourThreshold']}%) ===")
+        print(f"5시간 한도 : {telemetry['fiveHourRemainingPercent']}% (리셋: {reset_5h_str or '정보 없음'}) | 최근 5h: {telemetry['tokens5h']:,} tokens")
+        print(f"주간 한도   : {telemetry['weeklyRemainingPercent']}% (리셋: {reset_w_str or '정보 없음'}) | 세션: {telemetry['sessionTokens']:,} tokens")
         if telemetry["isLowQuota"]:
-            print(f"ALERT: {telemetry['recommendation']}")
+            print(f"⚠️ 쿼터 주의 : {telemetry['recommendation']}")
+        else:
+            print("상태       : 정상 (기준치 초과)")
 
 
 if __name__ == "__main__":
