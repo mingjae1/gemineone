@@ -96,6 +96,24 @@ class TestQuotaMeter(unittest.TestCase):
         self.assertTrue(telemetry["isLowQuota"])
         self.assertIn("모두 기준치", telemetry["recommendation"])
 
+    def test_fetch_live_quota_fallback_when_no_daemon(self):
+        empty_daemon_dir = os.path.join(self.test_dir, "empty_daemon")
+        os.makedirs(empty_daemon_dir, exist_ok=True)
+        live = quota_meter.fetch_live_antigravity_quota(daemon_dir=empty_daemon_dir)
+        self.assertIsNone(live)
+
+    def test_dual_quota_telemetry_with_live_or_fallback(self):
+        empty_daemon_dir = os.path.join(self.test_dir, "empty_daemon")
+        os.makedirs(empty_daemon_dir, exist_ok=True)
+        telemetry = quota_meter.get_dual_quota_telemetry(
+            conv_id=self.conv1,
+            brain_dir=self.test_dir,
+            daemon_dir=empty_daemon_dir
+        )
+        self.assertEqual(telemetry["quotaSource"], "calibrated_fallback")
+        self.assertIsNotNone(telemetry["fiveHourRemainingPercent"])
+        self.assertIsNotNone(telemetry["weeklyRemainingPercent"])
+
 
 if __name__ == "__main__":
     unittest.main()

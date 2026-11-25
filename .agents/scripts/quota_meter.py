@@ -43,6 +43,101 @@ def get_default_brain_dir():
     return os.path.join(user_home, ".gemini", "antigravity", "brain")
 
 
+def get_default_daemon_dir():
+    user_home = os.environ.get("USERPROFILE", os.path.expanduser("~"))
+    return os.path.join(user_home, ".gemini", "antigravity", "daemon")
+
+
+def fetch_live_antigravity_quota(daemon_dir=None, timeout=2):
+    """Directly queries the active Antigravity Hub Language Server via Connect RPC.
+
+    Returns a dict with live remaining quota percentages and reset times,
+    or None if the daemon is offline or unreachable.
+    """
+    if not daemon_dir:
+        daemon_dir = get_default_daemon_dir()
+    if not os.path.exists(daemon_dir):
+        return None
+
+    import glob
+    import urllib.request
+
+    hub_files = sorted(
+        glob.glob(os.path.join(daemon_dir, "hub_*.json")),
+        key=lambda f: os.path.getmtime(f) if os.path.exists(f) else 0,
+        reverse=True,
+    )
+    if not hub_files:
+        return None
+
+    for hf in hub_files:
+        try:
+            with open(hf, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            port = data.get("httpPort")
+            csrf = data.get("csrfToken")
+            if not port or not csrf:
+                continue
+
+            url = f"http://127.0.0.1:{port}/exa.language_server_pb.LanguageServerService/RetrieveUserQuotaSummary"
+            req = urllib.request.Request(
+                url,
+                data=b"{}",
+                headers={
+                    "Content-Type": "application/json",
+                    "x-codeium-csrf-token": csrf,
+                },
+            )
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                if resp.status == 200:
+                    res_json = json.loads(resp.read().decode("utf-8"))
+                    groups = res_json.get("response", {}).get("groups", [])
+                    result = {
+                        "source": "live_hub_api",
+                        "fiveHourRemainingPercent": None,
+                        "weeklyRemainingPercent": None,
+                        "reset5h": None,
+                        "resetWeekly": None,
+                        "desc5h": None,
+                        "descWeekly": None,
+                        "claudeGptWeeklyPercent": None,
+                        "claudeGpt5hPercent": None,
+                    }
+                    for g in groups:
+                        disp = g.get("displayName", "")
+                        buckets = g.get("buckets", [])
+                        if "Gemini" in disp:
+                            for b in buckets:
+                                win = b.get("window", "")
+                                bid = b.get("bucketId", "")
+                                frac = b.get("remainingFraction", 1.0)
+                                pct = round(frac * 100.0, 1)
+                                if win == "5h" or "5h" in bid:
+                                    result["fiveHourRemainingPercent"] = pct
+                                    result["reset5h"] = b.get("resetTime")
+                                    result["desc5h"] = b.get("description")
+                                elif win == "weekly" or "weekly" in bid:
+                                    result["weeklyRemainingPercent"] = pct
+                                    result["resetWeekly"] = b.get("resetTime")
+                                    result["descWeekly"] = b.get("description")
+                        elif "Claude" in disp or "GPT" in disp:
+                            for b in buckets:
+                                win = b.get("window", "")
+                                bid = b.get("bucketId", "")
+                                frac = b.get("remainingFraction", 1.0)
+                                pct = round(frac * 100.0, 1)
+                                if win == "weekly" or "weekly" in bid:
+                                    result["claudeGptWeeklyPercent"] = pct
+                                elif win == "5h" or "5h" in bid:
+                                    result["claudeGpt5hPercent"] = pct
+
+                    if result["fiveHourRemainingPercent"] is not None and result["weeklyRemainingPercent"] is not None:
+                        return result
+        except Exception:
+            continue
+    return None
+
+
 def find_latest_conversation_id(brain_dir=None):
     if not brain_dir:
         brain_dir = get_default_brain_dir()
@@ -179,7 +274,7 @@ def compute_today_tokens(brain_dir=None, target_date=None):
     return total_tokens, total_steps
 
 
-def get_dual_quota_telemetry(conv_id=None, brain_dir=None, now_utc=None, five_h_override=None, weekly_override=None):
+def get_dual_quota_telemetry(conv_id=None, brain_dir=None, now_utc=None, five_h_override=None, weekly_override=None, daemon_dir=None):
     config = load_json(CONFIG_PATH, {})
     state = load_json(STATE_PATH, {})
 
@@ -192,8 +287,39 @@ def get_dual_quota_telemetry(conv_id=None, brain_dir=None, now_utc=None, five_h_
     base_5h = calibrated.get("fiveHourRemainingPercent", 72.0)
     base_weekly = calibrated.get("weeklyRemainingPercent", 93.0)
 
-    rem_5h = float(five_h_override) if five_h_override is not None else float(base_5h)
-    rem_weekly = float(weekly_override) if weekly_override is not None else float(base_weekly)
+    live_quota = None
+    quota_source = "calibrated_fallback"
+
+    # Only fetch live quota if overrides are not explicitly provided
+    if five_h_override is None and weekly_override is None:
+        live_quota = fetch_live_antigravity_quota(daemon_dir=daemon_dir)
+
+    if five_h_override is not None:
+        rem_5h = float(five_h_override)
+        quota_source = "manual_override"
+    elif live_quota and live_quota.get("fiveHourRemainingPercent") is not None:
+        rem_5h = float(live_quota["fiveHourRemainingPercent"])
+        quota_source = "live_hub_api"
+    else:
+        rem_5h = float(base_5h)
+
+    if weekly_override is not None:
+        rem_weekly = float(weekly_override)
+        if quota_source != "manual_override":
+            quota_source = "manual_override"
+    elif live_quota and live_quota.get("weeklyRemainingPercent") is not None:
+        rem_weekly = float(live_quota["weeklyRemainingPercent"])
+    else:
+        rem_weekly = float(base_weekly)
+
+    # If fetched from live hub API, sync to calibratedLimits for offline resilience
+    if quota_source == "live_hub_api":
+        calibrated["fiveHourRemainingPercent"] = rem_5h
+        calibrated["weeklyRemainingPercent"] = rem_weekly
+        try:
+            save_json(CONFIG_PATH, config)
+        except Exception:
+            pass
 
     if not conv_id:
         conv_id = find_latest_conversation_id(brain_dir) or state.get("coordinatorConversationId")
@@ -224,7 +350,7 @@ def get_dual_quota_telemetry(conv_id=None, brain_dir=None, now_utc=None, five_h_
             "이번 주 남은 일정을 위해 Carbon/Argon 고사양 모델 호출을 자제하고 표준 티어를 권장합니다."
         )
 
-    return {
+    res = {
         "conversationId": conv_id,
         "sessionTokens": session_tokens,
         "tokens5h": tokens_5h,
@@ -238,7 +364,18 @@ def get_dual_quota_telemetry(conv_id=None, brain_dir=None, now_utc=None, five_h_
         "isLowQuota": is_low_quota,
         "hasCarbon": has_carbon,
         "recommendation": recommendation,
+        "quotaSource": quota_source,
     }
+
+    if live_quota:
+        res["reset5h"] = live_quota.get("reset5h")
+        res["resetWeekly"] = live_quota.get("resetWeekly")
+        res["desc5h"] = live_quota.get("desc5h")
+        res["descWeekly"] = live_quota.get("descWeekly")
+        res["claudeGptWeeklyPercent"] = live_quota.get("claudeGptWeeklyPercent")
+        res["claudeGpt5hPercent"] = live_quota.get("claudeGpt5hPercent")
+
+    return res
 
 
 def make_bar(percent, total_blocks=15):
@@ -257,14 +394,23 @@ def format_markdown_footer(telemetry):
 
     session_t = f"{telemetry['sessionTokens']:,}"
     rolling_5h_t = f"{telemetry['tokens5h']:,}"
+    source_label = "실시간 Hub API 연동" if telemetry.get("quotaSource") == "live_hub_api" else "로컬 캐시 기준"
 
     lines = [
         "---",
-        "> [!NOTE] **Antigravity Dual Quota Telemetry**",
+        f"> [!NOTE] **Antigravity Dual Quota Telemetry** `[{source_label}]`",
         f"> • **5h Limit (단기 롤링)**  : `[{bar_5h}]` **{p_5h:.1f}%** (기준: {th_5h}% 이하 시 경고) | 최근 5시간: `{rolling_5h_t}` tokens",
         f"> • **Weekly Limit (주간 총량)**: `[{bar_w}]` **{p_w:.1f}%** (기준: {th_w}% 이하 시 경고) | 세션 누적: `{session_t}` tokens",
         f"> • **Carbon 플래그십**        : `{'활성 (Active - 전면 개방)' if telemetry['hasCarbon'] else '미가용'}`",
     ]
+
+    if telemetry.get("reset5h") or telemetry.get("resetWeekly"):
+        parts = []
+        if telemetry.get("reset5h"):
+            parts.append(f"5h 리셋: `{telemetry['reset5h']}`")
+        if telemetry.get("resetWeekly"):
+            parts.append(f"주간 리셋: `{telemetry['resetWeekly']}`")
+        lines.append(f"> • **리셋 시각 (UTC)**       : {' | '.join(parts)}")
 
     if telemetry["isLowQuota"]:
         lines.append(f"> • ⚠️ **쿼터 주의 (5h Limit: {p_5h:.1f}%, Weekly Limit: {p_w:.1f}%)**: {telemetry['recommendation']}")
@@ -333,8 +479,13 @@ def main():
         print(format_markdown_footer(telemetry))
     else:
         print("=== Antigravity Dual Quota Telemetry ===")
+        print(f"Quota Source           : {telemetry.get('quotaSource')}")
         print(f"5h Limit Remaining     : {telemetry['fiveHourRemainingPercent']}% (Threshold: {telemetry['fiveHourThreshold']}%)")
         print(f"Weekly Limit Remaining : {telemetry['weeklyRemainingPercent']}% (Threshold: {telemetry['weeklyThreshold']}%)")
+        if telemetry.get("reset5h"):
+            print(f"5h Reset Time (UTC)    : {telemetry.get('reset5h')}")
+        if telemetry.get("resetWeekly"):
+            print(f"Weekly Reset Time (UTC): {telemetry.get('resetWeekly')}")
         print(f"Recent 5h Tokens       : {telemetry['tokens5h']:,} across {telemetry['steps5h']} steps")
         print(f"Session Tokens         : {telemetry['sessionTokens']:,}")
         print(f"Low Quota Alert Active : {telemetry['isLowQuota']}")
