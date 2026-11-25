@@ -56,14 +56,14 @@
 - Thinking effort tiers are adaptive across the Gemini family (Flash, Hydrogen, Neon, Argon) to prevent quota exhaustion and balance reasoning power:
   1. **Explicit Request Respected**: When a specific tier (`low`, `medium`, `high`, `xhigh`) or explicit model ID is requested, the hook respects the requested tier instead of forcibly upgrading to max effort.
   2. **Adaptive Auto-Routing**: When `model` is omitted or set to `auto`, `.agents/scripts/orca_hook.py` inspects the task `brief` and keywords:
-     - `deep_architecture_concurrency` (동시성/데드락/분산/RMI/심층 아키텍처): `gemini-4-argon-high` (또는 `enableCarbon: true` 시 `gemini-4-carbon`)
+     - `deep_architecture_concurrency` (동시성/데드락/분산/RMI/심층 아키텍처): `gemini-4-carbon-high`
      - `complex_implementation_debug` (대규모/벤치마크/복합 디버깅): `gemini-4-hydrogen-xhigh` 또는 `gemini-4-neon-xhigh`
      - `standard_development_test` (기능 구현/컴포넌트/테스트): `gemini-4-hydrogen-high` (Default) 또는 `gemini-4-neon-high`
      - `light_scripting_edit` (경량 스크립트/단순 수정): `gemini-4-hydrogen-low` 또는 `gemini-4-neon-low`
      - `boilerplate_config_docs` (단순 설정/.gitignore/README/포맷팅): `gemini-3.8-flash-high`
   3. **Neon & Carbon 지원 (최신 릴리즈 및 미래 호환성)**:
      - Antigravity 1.5.12 패치로 추가된 **`gemini-4-neon` 패밀리(Low~XHigh, Orchestrator)** 전 티어 완벽 지원.
-     - `gemini-4-carbon` 패밀리 사전 등록 및 Graceful Fallback 지원 (`carbonFallback`: `gemini-4-argon-high`).
+     - `gemini-4-carbon` 패밀리 전면 활성화 (전체 사용자 대상 오픈 및 `enableCarbon: true` 표준화).
 - `.agents/hooks.json` automatically blocks coordinator direct file edits outside exempt paths and transparently routes swarm workers to the appropriate adaptive model tier.
 
 ## 4. Parallel Fan-out for Independent Tasks

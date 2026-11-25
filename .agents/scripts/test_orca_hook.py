@@ -160,6 +160,11 @@ def test_suite():
 
     try:
         # 1. Pro-Safe environment tests (hasCarbon=False, enableCarbon=false)
+        if orig_cfg:
+            mock_cfg = dict(orig_cfg)
+            mock_cfg["enableCarbon"] = False
+            with open(CONFIG_PATH, "w", encoding="utf-8") as f:
+                json.dump(mock_cfg, f, indent=2, ensure_ascii=False)
         if orig_state:
             mock_state = dict(orig_state)
             mock_state["hasCarbon"] = False
