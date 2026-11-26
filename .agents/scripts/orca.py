@@ -48,15 +48,40 @@ def stage_ui_artifacts(target_artifact_dir=None):
     if target_artifact_dir and os.path.exists(target_artifact_dir):
         import shutil
         staged = []
+        telemetry_json = None
+        try:
+            telemetry = quota_meter.get_dual_quota_telemetry()
+            telemetry_json = json.dumps(telemetry, ensure_ascii=False)
+        except Exception:
+            pass
+
         for fname in ["orca_settings.html", "orca_models.html", "orca_control_center.html"]:
             src = os.path.join(UI_DIR, fname)
             dst = os.path.join(target_artifact_dir, fname)
             if os.path.exists(src):
                 try:
-                    shutil.copy2(src, dst)
+                    if telemetry_json and fname == "orca_control_center.html":
+                        with open(src, "r", encoding="utf-8") as f_in:
+                            content = f_in.read()
+                        if "/* __ORCA_INJECT_DATA__ */" in content:
+                            import re
+                            content = re.sub(
+                                r"/\* __ORCA_INJECT_DATA__ \*/\s*window\.__ORCA_DATA__\s*=\s*window\.__ORCA_DATA__\s*\|\|\s*\{.*?\};",
+                                f"/* __ORCA_INJECT_DATA__ */\n    window.__ORCA_DATA__ = {telemetry_json};",
+                                content,
+                                flags=re.DOTALL
+                            )
+                        with open(dst, "w", encoding="utf-8") as f_out:
+                            f_out.write(content)
+                    else:
+                        shutil.copy2(src, dst)
                     staged.append(dst)
                 except Exception:
-                    pass
+                    try:
+                        shutil.copy2(src, dst)
+                        staged.append(dst)
+                    except Exception:
+                        pass
         return target_artifact_dir, staged
     return None, []
 
