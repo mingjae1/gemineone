@@ -22,6 +22,45 @@ if SCRIPT_DIR not in sys.path:
 import quota_meter
 
 
+UI_DIR = os.path.join(BASE_DIR, "ui")
+
+
+def stage_ui_artifacts(target_artifact_dir=None):
+    """
+    Stage UI html templates from .agents/ui/ to the active Antigravity conversation artifact directory.
+    Ensures seamless generative UI rendering across different machines and conversations.
+    """
+    if not os.path.exists(UI_DIR):
+        return None, []
+
+    if not target_artifact_dir:
+        brain_root = os.path.expanduser(r"~\.gemini\antigravity\brain")
+        if os.path.exists(brain_root):
+            conv_dirs = [
+                os.path.join(brain_root, d)
+                for d in os.listdir(brain_root)
+                if os.path.isdir(os.path.join(brain_root, d)) and not d.startswith(".")
+            ]
+            if conv_dirs:
+                conv_dirs.sort(key=lambda p: os.path.getmtime(p), reverse=True)
+                target_artifact_dir = conv_dirs[0]
+
+    if target_artifact_dir and os.path.exists(target_artifact_dir):
+        import shutil
+        staged = []
+        for fname in ["orca_settings.html", "orca_models.html"]:
+            src = os.path.join(UI_DIR, fname)
+            dst = os.path.join(target_artifact_dir, fname)
+            if os.path.exists(src):
+                try:
+                    shutil.copy2(src, dst)
+                    staged.append(dst)
+                except Exception:
+                    pass
+        return target_artifact_dir, staged
+    return None, []
+
+
 def load_json(path, default=None):
     if default is None:
         default = {}
@@ -223,6 +262,21 @@ def cmd_setting(args):
         save_json(CONFIG_PATH, config)
         print("[ORCA] Settings successfully updated.")
 
+    if getattr(args, "ui", False):
+        import webbrowser
+        target_dir, staged = stage_ui_artifacts()
+        settings_html = os.path.join(UI_DIR, "orca_settings.html")
+        if target_dir:
+            staged_html = os.path.join(target_dir, "orca_settings.html")
+            if os.path.exists(staged_html):
+                settings_html = staged_html
+        print(f"[ORCA UI] Settings Hub UI: {settings_html}")
+        try:
+            webbrowser.open(f"file:///{os.path.abspath(settings_html).replace(os.sep, '/')}")
+        except Exception:
+            pass
+        return
+
     if args.json:
         print(json.dumps({
             "version": config.get("version"),
@@ -293,6 +347,21 @@ def cmd_model(args):
     tiers = config.get("tiers", {})
     resolved_default_worker = tiers.get(default_tier, default_tier)
 
+    if getattr(args, "ui", False):
+        import webbrowser
+        target_dir, staged = stage_ui_artifacts()
+        models_html = os.path.join(UI_DIR, "orca_models.html")
+        if target_dir:
+            staged_html = os.path.join(target_dir, "orca_models.html")
+            if os.path.exists(staged_html):
+                models_html = staged_html
+        print(f"[ORCA UI] Models Configuration UI: {models_html}")
+        try:
+            webbrowser.open(f"file:///{os.path.abspath(models_html).replace(os.sep, '/')}")
+        except Exception:
+            pass
+        return
+
     if args.json:
         print(json.dumps({
             "coordinatorModel": coord_model,
@@ -360,9 +429,9 @@ def cmd_help(args):
   /orca quota         : Output real-time dual quota telemetry footer
 
 [Terminal CLI Commands]
-  python .agents/scripts/orca.py model [--main <model>] [--worker <tier>] [--list]
+  python .agents/scripts/orca.py model [--main <model>] [--worker <tier>] [--ui] [--list]
   python .agents/scripts/orca.py status
-  python .agents/scripts/orca.py setting [--ag-5h <N>] [--ag-weekly <N>]
+  python .agents/scripts/orca.py setting [--ag-5h <N>] [--ag-weekly <N>] [--ui]
   python .agents/scripts/orca.py sync
   python .agents/scripts/orca.py quota
 """)
@@ -386,11 +455,13 @@ def main():
     p_model.add_argument("--light", type=str, default=None, help="Set target model for light scripting/edits")
     p_model.add_argument("--docs", type=str, default=None, help="Set target model for configs, docs, boilerplate")
     p_model.add_argument("--list", action="store_true", help="List all available live models")
+    p_model.add_argument("--ui", action="store_true", help="Open Models Configuration HTML UI")
     p_model.add_argument("--json", action="store_true", help="Output models configuration as JSON")
     p_model.set_defaults(func=cmd_model)
 
     # setting
     p_setting = subparsers.add_parser("setting", aliases=["settings", "config"], help="View or update settings")
+    p_setting.add_argument("--ui", action="store_true", help="Open Settings Hub HTML UI")
     p_setting.add_argument("--threshold", type=float, default=None, help="Set both 5h and weekly threshold percent")
     p_setting.add_argument("--threshold-5h", type=float, default=None, help="Set 5h threshold percent")
     p_setting.add_argument("--threshold-weekly", type=float, default=None, help="Set weekly threshold percent")

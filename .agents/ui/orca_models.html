@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+</head>
+<body class="bg-transparent text-[var(--foreground)] antialiased p-0 m-0 text-xs select-none">
+  <div class="py-2.5 px-3 rounded-lg border border-[var(--card-border)] bg-[var(--card)] space-y-3 max-w-xl shadow-sm">
+    <!-- 헤더 -->
+    <div class="flex items-center justify-between border-b border-[var(--card-border)] pb-2">
+      <div class="flex items-center gap-2">
+        <span class="text-base">🧭</span>
+        <div>
+          <div class="font-semibold text-sm text-[var(--foreground)] tracking-tight">오케스트레이션 모델 관리</div>
+          <div class="text-[10px] text-[var(--muted-foreground)]">메인 대화 및 코워커 모델을 지정하고 작업별 라우팅을 조정합니다.</div>
+        </div>
+      </div>
+      <div class="flex items-center gap-1.5 px-2 py-0.5 rounded bg-[var(--surface-variant,rgba(0,0,0,0.05))] text-[11px] font-mono text-[var(--muted-foreground)]">
+        <span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+        v0.4.0
+      </div>
+    </div>
+
+    <!-- 1. 메인 대화 모델 -->
+    <div class="rounded-md border border-[var(--card-border)] bg-[var(--surface-variant,rgba(0,0,0,0.015))] p-2 space-y-1.5">
+      <div class="flex items-center justify-between pb-1 border-b border-[var(--card-border)]/50">
+        <div class="flex items-center gap-1.5 font-semibold text-[11px] text-[var(--foreground)]">
+          <span class="text-xs">🗣️</span> 메인 대화 모델
+        </div>
+        <span class="text-[9px] text-[var(--muted-foreground)]">유저와 직접 대화 및 작업 분배 담당</span>
+      </div>
+      <div class="grid grid-cols-2 gap-1.5 pt-0.5">
+        <label id="lbl-coord-flash" class="flex items-center gap-2 px-2 py-1.5 rounded border border-[var(--primary)] bg-[var(--surface-variant,rgba(0,0,0,0.04))] cursor-pointer transition-colors">
+          <input type="radio" name="coord" value="gemini-3.8-flash-high" checked class="accent-[var(--primary)]" />
+          <div>
+            <div class="font-medium text-[11px] text-[var(--foreground)]">Gemini 3.8 Flash High</div>
+            <div class="text-[9px] text-[var(--muted-foreground)]">권장: 초고속 응답 및 작업 분배</div>
+          </div>
+        </label>
+        <label id="lbl-coord-neon" class="flex items-center gap-2 px-2 py-1.5 rounded border border-[var(--card-border)] hover:border-[var(--primary)] cursor-pointer transition-colors">
+          <input type="radio" name="coord" value="gemini-4-neon-high" class="accent-[var(--primary)]" />
+          <div>
+            <div class="font-medium text-[11px] text-[var(--foreground)]">Gemini 4 Neon High</div>
+            <div class="text-[9px] text-[var(--muted-foreground)]">고성능 종합 추론 모델</div>
+          </div>
+        </label>
+        <label id="lbl-coord-hydrogen" class="flex items-center gap-2 px-2 py-1.5 rounded border border-[var(--card-border)] hover:border-[var(--primary)] cursor-pointer transition-colors">
+          <input type="radio" name="coord" value="gemini-4-hydrogen-high" class="accent-[var(--primary)]" />
+          <div>
+            <div class="font-medium text-[11px] text-[var(--foreground)]">Gemini 4 Hydrogen High</div>
+            <div class="text-[9px] text-[var(--muted-foreground)]">심층 분석 및 복합 컨텍스트</div>
+          </div>
+        </label>
+        <label id="lbl-coord-carbon" class="flex items-center gap-2 px-2 py-1.5 rounded border border-[var(--card-border)] hover:border-[var(--primary)] cursor-pointer transition-colors">
+          <input type="radio" name="coord" value="gemini-4-carbon-high" class="accent-[var(--primary)]" />
+          <div>
+            <div class="font-medium text-[11px] text-[var(--foreground)]">Gemini 4 Carbon High</div>
+            <div class="text-[9px] text-[var(--muted-foreground)]">최고사양 아키텍처 전담 모델</div>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <!-- 2. 기본 코워커 모델 -->
+    <div class="rounded-md border border-[var(--card-border)] bg-[var(--surface-variant,rgba(0,0,0,0.015))] p-2 space-y-1.5">
+      <div class="flex items-center justify-between pb-1 border-b border-[var(--card-border)]/50">
+        <div class="flex items-center gap-1.5 font-semibold text-[11px] text-[var(--foreground)]">
+          <span class="text-xs">🤝</span> 기본 코워커 모델
+        </div>
+        <span class="text-[9px] text-[var(--muted-foreground)]">별도 지정 없을 때 기본 실행되는 작업자</span>
+      </div>
+      <div class="flex items-center justify-between px-1 pt-0.5">
+        <span class="text-[11px] text-[var(--muted-foreground)]">기본 실행 티어 선택:</span>
+        <select id="sel-worker" class="px-2 py-1 rounded border border-[var(--card-border)] bg-[var(--card)] text-[var(--foreground)] text-[11px] font-medium focus:outline-none focus:border-[var(--primary)]">
+          <option value="hydrogen-high" selected>Gemini 4 Hydrogen High (표준 권장)</option>
+          <option value="neon-high">Gemini 4 Neon High (고성능 균형)</option>
+          <option value="neon-low">Gemini 4 Neon Low (경량 절약)</option>
+          <option value="carbon-high">Gemini 4 Carbon High (고사양)</option>
+          <option value="argon-high">Gemini 4 Argon High (고정밀 추론)</option>
+          <option value="flash-high">Gemini 3.8 Flash High (초고속 처리)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- 3. 작업 유형별 적응형 라우팅 (Adaptive Routing) -->
+    <div class="rounded-md border border-[var(--card-border)] bg-[var(--surface-variant,rgba(0,0,0,0.015))] p-2 space-y-1.5">
+      <div class="flex items-center justify-between pb-1 border-b border-[var(--card-border)]/50">
+        <div class="flex items-center gap-1.5 font-semibold text-[11px] text-[var(--foreground)]">
+          <span class="text-xs">⚡</span> 작업 유형별 적응형 코워커 라우팅
+        </div>
+        <span class="text-[9px] text-[var(--muted-foreground)]">작업 지시어 기반 자동 최적 모델 배정</span>
+      </div>
+
+      <div class="space-y-1 pt-0.5">
+        <!-- Arch -->
+        <div class="flex items-center justify-between px-1.5 py-1 rounded bg-[var(--card)] border border-[var(--card-border)]">
+          <div>
+            <div class="font-medium text-[11px] text-[var(--foreground)]">심층 아키텍처 및 동시성</div>
+            <div class="text-[9px] text-[var(--muted-foreground)]">데드락, 분산 통신, 경합 조건, 메모리 분석</div>
+          </div>
+          <select id="sel-arch" class="px-2 py-0.5 rounded border border-[var(--card-border)] bg-[var(--surface-variant,rgba(0,0,0,0.03))] text-[var(--foreground)] text-[10px] font-mono focus:outline-none">
+            <option value="gemini-4-carbon-high" selected>gemini-4-carbon-high</option>
+            <option value="gemini-4-hydrogen-xhigh">gemini-4-hydrogen-xhigh</option>
+            <option value="gemini-4-neon-xhigh">gemini-4-neon-xhigh</option>
+          </select>
+        </div>
+
+        <!-- Debug -->
+        <div class="flex items-center justify-between px-1.5 py-1 rounded bg-[var(--card)] border border-[var(--card-border)]">
+          <div>
+            <div class="font-medium text-[11px] text-[var(--foreground)]">복합 디버깅 및 대규모 테스트</div>
+            <div class="text-[9px] text-[var(--muted-foreground)]">벤치마크, 크로스 모듈 버그, 심층 디버깅</div>
+          </div>
+          <select id="sel-debug" class="px-2 py-0.5 rounded border border-[var(--card-border)] bg-[var(--surface-variant,rgba(0,0,0,0.03))] text-[var(--foreground)] text-[10px] font-mono focus:outline-none">
+            <option value="gemini-4-hydrogen-xhigh" selected>gemini-4-hydrogen-xhigh</option>
+            <option value="gemini-4-neon-xhigh">gemini-4-neon-xhigh</option>
+            <option value="gemini-4-carbon-high">gemini-4-carbon-high</option>
+          </select>
+        </div>
+
+        <!-- Dev -->
+        <div class="flex items-center justify-between px-1.5 py-1 rounded bg-[var(--card)] border border-[var(--card-border)]">
+          <div>
+            <div class="font-medium text-[11px] text-[var(--foreground)]">일반 기능 구현 및 개발</div>
+            <div class="text-[9px] text-[var(--muted-foreground)]">기능 추가, 컴포넌트 개발, 유닛 테스트 작성</div>
+          </div>
+          <select id="sel-dev" class="px-2 py-0.5 rounded border border-[var(--card-border)] bg-[var(--surface-variant,rgba(0,0,0,0.03))] text-[var(--foreground)] text-[10px] font-mono focus:outline-none">
+            <option value="gemini-4-hydrogen-high" selected>gemini-4-hydrogen-high</option>
+            <option value="gemini-4-neon-high">gemini-4-neon-high</option>
+          </select>
+        </div>
+
+        <!-- Light -->
+        <div class="flex items-center justify-between px-1.5 py-1 rounded bg-[var(--card)] border border-[var(--card-border)]">
+          <div>
+            <div class="font-medium text-[11px] text-[var(--foreground)]">경량 스크립트 및 단순 수정</div>
+            <div class="text-[9px] text-[var(--muted-foreground)]">한 줄 수정, 단순 파싱, 사소한 리팩토링</div>
+          </div>
+          <select id="sel-light" class="px-2 py-0.5 rounded border border-[var(--card-border)] bg-[var(--surface-variant,rgba(0,0,0,0.03))] text-[var(--foreground)] text-[10px] font-mono focus:outline-none">
+            <option value="gemini-4-hydrogen-low" selected>gemini-4-hydrogen-low</option>
+            <option value="gemini-4-neon-low">gemini-4-neon-low</option>
+          </select>
+        </div>
+
+        <!-- Docs -->
+        <div class="flex items-center justify-between px-1.5 py-1 rounded bg-[var(--card)] border border-[var(--card-border)]">
+          <div>
+            <div class="font-medium text-[11px] text-[var(--foreground)]">보일러플레이트 및 설정/문서</div>
+            <div class="text-[9px] text-[var(--muted-foreground)]">.gitignore, README, 주석, 포맷팅, 설정 파일</div>
+          </div>
+          <select id="sel-docs" class="px-2 py-0.5 rounded border border-[var(--card-border)] bg-[var(--surface-variant,rgba(0,0,0,0.03))] text-[var(--foreground)] text-[10px] font-mono focus:outline-none">
+            <option value="gemini-3.8-flash-high" selected>gemini-3.8-flash-high</option>
+            <option value="gemini-3.8-flash-low">gemini-3.8-flash-low</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- 명령어 미리보기 및 액션 버튼 -->
+    <div class="border-t border-[var(--card-border)] pt-2 flex items-center justify-between text-[11px]">
+      <div id="cmd-preview" class="font-mono text-[9px] text-[var(--muted-foreground)] truncate max-w-sm">
+        python .agents/scripts/orca.py model --main gemini-3.8-flash-high --worker hydrogen-high
+      </div>
+      <button id="btn-apply" class="px-2.5 py-1 rounded bg-[var(--primary)] text-[var(--primary-foreground)] text-[10px] font-medium hover:opacity-90 transition-opacity flex-shrink-0">
+        설정 복사
+      </button>
+    </div>
+  </div>
+
+  <script>
+    const coordRadios = document.querySelectorAll('input[name="coord"]');
+    const selWorker = document.getElementById('sel-worker');
+    const selArch = document.getElementById('sel-arch');
+    const selDebug = document.getElementById('sel-debug');
+    const selDev = document.getElementById('sel-dev');
+    const selLight = document.getElementById('sel-light');
+    const selDocs = document.getElementById('sel-docs');
+    const cmdPreview = document.getElementById('cmd-preview');
+    const btnApply = document.getElementById('btn-apply');
+
+    const labels = {
+      'gemini-3.8-flash-high': document.getElementById('lbl-coord-flash'),
+      'gemini-4-neon-high': document.getElementById('lbl-coord-neon'),
+      'gemini-4-hydrogen-high': document.getElementById('lbl-coord-hydrogen'),
+      'gemini-4-carbon-high': document.getElementById('lbl-coord-carbon'),
+    };
+
+    function update() {
+      let mainModel = 'gemini-3.8-flash-high';
+      coordRadios.forEach(r => {
+        const lbl = labels[r.value];
+        if (r.checked) {
+          mainModel = r.value;
+          if (lbl) lbl.className = 'flex items-center gap-2 px-2 py-1.5 rounded border border-[var(--primary)] bg-[var(--surface-variant,rgba(0,0,0,0.04))] cursor-pointer transition-colors';
+        } else {
+          if (lbl) lbl.className = 'flex items-center gap-2 px-2 py-1.5 rounded border border-[var(--card-border)] hover:border-[var(--primary)] cursor-pointer transition-colors';
+        }
+      });
+
+      const workerTier = selWorker.value;
+      const arch = selArch.value;
+      const debug = selDebug.value;
+      const dev = selDev.value;
+      const light = selLight.value;
+      const docs = selDocs.value;
+
+      let cmd = `python .agents/scripts/orca.py model --main ${mainModel} --worker ${workerTier}`;
+      if (arch !== 'gemini-4-carbon-high') cmd += ` --arch ${arch}`;
+      if (debug !== 'gemini-4-hydrogen-xhigh') cmd += ` --debug ${debug}`;
+      if (dev !== 'gemini-4-hydrogen-high') cmd += ` --dev ${dev}`;
+      if (light !== 'gemini-4-hydrogen-low') cmd += ` --light ${light}`;
+      if (docs !== 'gemini-3.8-flash-high') cmd += ` --docs ${docs}`;
+
+      cmdPreview.textContent = cmd;
+    }
+
+    coordRadios.forEach(r => r.addEventListener('change', update));
+    [selWorker, selArch, selDebug, selDev, selLight, selDocs].forEach(el => {
+      el.addEventListener('change', update);
+    });
+
+    btnApply.addEventListener('click', () => {
+      navigator.clipboard.writeText(cmdPreview.textContent).then(() => {
+        const orig = btnApply.textContent;
+        btnApply.textContent = '복사 완료! ✓';
+        setTimeout(() => { btnApply.textContent = orig; }, 1500);
+      });
+    });
+
+    update();
+  </script>
+</body>
+</html>
