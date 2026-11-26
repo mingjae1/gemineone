@@ -39,7 +39,22 @@ def save_json(path, data):
     try:
         with open(tmp_path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
-        os.replace(tmp_path, path)
+        import time
+        replaced = False
+        for attempt in range(5):
+            try:
+                os.replace(tmp_path, path)
+                replaced = True
+                break
+            except PermissionError:
+                time.sleep(0.05 * (attempt + 1))
+        if not replaced:
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+            try:
+                os.remove(tmp_path)
+            except OSError:
+                pass
     except Exception as e:
         print(f"[ORCA CLI] Error saving {path}: {e}", file=sys.stderr)
         try:
