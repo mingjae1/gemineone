@@ -399,8 +399,8 @@
               <div class="h-full ${p5h <= 10 ? 'bg-red-500' : 'bg-emerald-500'} rounded-full transition-all duration-500" style="width: ${Math.min(100, Math.max(0, p5h))}%;"></div>
             </div>
             <div class="text-[9px] text-[var(--muted-foreground)] flex justify-between">
-              <span>최소 알림 임계치: 10%</span>
-              <span>리셋 예정: ${reset5h} (슬라이딩 롤링)</span>
+              <span>갱신: 5시간 슬라이딩 롤링 (순차 복원)</span>
+              <span>리셋 예정: ${reset5h}</span>
             </div>
           </div>
 
@@ -414,8 +414,8 @@
               <div class="h-full ${pw <= 25 ? 'bg-amber-500' : 'bg-emerald-500'} rounded-full transition-all duration-500" style="width: ${Math.min(100, Math.max(0, pw))}%;"></div>
             </div>
             <div class="text-[9px] text-[var(--muted-foreground)] flex justify-between">
-              <span>최소 알림 임계치: 25%</span>
-              <span>리셋 예정: ${resetW} (주간 갱신)</span>
+              <span>갱신: 주간 고정 일괄 충전 (목요일 리셋)</span>
+              <span>리셋 예정: ${resetW}</span>
             </div>
           </div>
       `;
@@ -432,8 +432,8 @@
               <div class="h-full bg-blue-500 rounded-full transition-all duration-500" style="width: ${Math.min(100, Math.max(0, c3p))}%;"></div>
             </div>
             <div class="text-[9px] text-[var(--muted-foreground)] flex justify-between">
-              <span>안티그래비티 내부 3P 할당량</span>
-              <span>주간 갱신</span>
+              <span>갱신: 주간 고정 일괄 충전 (내부 할당)</span>
+              <span>주간 리셋</span>
             </div>
           </div>
         `;
@@ -485,8 +485,8 @@
                   <div class="h-full ${colorClass} rounded-full transition-all duration-500" style="width: ${Math.min(100, Math.max(0, remPct))}%;"></div>
                 </div>
                 <div class="text-[9px] text-[var(--muted-foreground)] flex justify-between">
-                  <span>단위: ${q.unit || '기본'}</span>
-                  <span>리셋 예정: ${q.resetDesc || '자동 갱신'}</span>
+                  <span>갱신: ${q.refreshMechanism || '슬라이딩 롤링'}</span>
+                  <span>리셋: ${q.resetDesc || '자동 갱신'}</span>
                 </div>
               </div>
             </div>
@@ -534,7 +534,7 @@
                   <div class="h-full bg-emerald-500 rounded-full transition-all duration-500" style="width: ${corePct}%;"></div>
                 </div>
                 <div class="text-[9px] text-[var(--muted-foreground)] flex justify-between">
-                  <span>플랫폼 REST API: 5,000 req/hr</span>
+                  <span>갱신: 1시간 슬라이딩 윈도우 (5,000 req/hr)</span>
                   <span>리셋 예정: 1시간 슬라이딩 갱신</span>
                 </div>
               </div>
@@ -564,6 +564,10 @@
                 </div>
                 <div class="w-full h-2 rounded-full bg-[var(--card-border)] overflow-hidden">
                   <div class="h-full bg-emerald-500 rounded-full transition-all duration-500" style="width: 100%;"></div>
+                </div>
+                <div class="text-[9px] text-[var(--muted-foreground)] flex justify-between">
+                  <span>갱신: 3시간 슬라이딩 롤링</span>
+                  <span>세션 정상</span>
                 </div>
               </div>
             </div>

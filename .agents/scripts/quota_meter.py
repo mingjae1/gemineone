@@ -472,6 +472,9 @@ def get_dual_quota_telemetry(conv_id=None, brain_dir=None, now_utc=None, five_h_
         "quotaSource": quota_source,
         "agentBreakdown": get_agent_breakdown(conv_id, brain_dir),
         "externalProviders": get_external_providers(),
+        "refreshMechanism5h": "5시간 슬라이딩 롤링 윈도우 (순차 복원)",
+        "refreshMechanismWeekly": "주간 고정 시각 일괄 충전 (주 1회 목요일 100% 리셋)",
+        "refreshMechanism3p": "주간 고정 시각 일괄 충전 (안티그래비티 내부 주간 할당)",
     }
 
     try:
@@ -535,13 +538,28 @@ def format_markdown_footer(telemetry):
     lines = [
         "---",
         "> [!NOTE] **쿼터 현황**",
-        f"> • **Antigravity** : 5시간 한도 **{p_5h:.1f}%** · 주간 한도 **{p_w:.1f}%**{reset_info}",
+        f"> • **Antigravity** : 5시간 한도 **{p_5h:.1f}%** (5시간 슬라이딩) · 주간 한도 **{p_w:.1f}%** (주간 일괄 리셋){reset_info}",
     ]
 
     # 오직 실제 측정 가능한 잔여 쿼터 수치만 표시
     c_3p = telemetry.get("claudeGptWeeklyPercent")
     if c_3p is not None:
-        lines.append(f"> • **Claude / 3P**  : 주간 쿼터 **{c_3p:.1f}%**")
+        lines.append(f"> • **Claude / 3P**  : 주간 쿼터 **{c_3p:.1f}%** (주간 일괄 리셋)")
+
+    # 활성 외부 코워커 쿼터 및 갱신 방식 표시
+    active_q = telemetry.get("activeQuotas", {})
+    if active_q:
+        for m_name, q_info in active_q.items():
+            if not q_info or not q_info.get("available"):
+                continue
+            icon = q_info.get("icon", "📦")
+            d_name = q_info.get("displayName", m_name)
+            rem_pct = q_info.get("remainingPercent", 100.0)
+            rem_val = q_info.get("remaining", "")
+            unit = q_info.get("unit", "")
+            val_str = f" ({rem_val:,} {unit})" if isinstance(rem_val, (int, float)) and unit else ""
+            ref_mech = q_info.get("refreshMechanism") or q_info.get("resetDesc", "자동 갱신")
+            lines.append(f"> • **{icon} {d_name}** : **{rem_pct:.1f}%**{val_str} · 갱신: {ref_mech}")
 
     if telemetry.get("showAgentBreakdown", False):
         agents = telemetry.get("agentBreakdown", [])

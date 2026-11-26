@@ -151,10 +151,10 @@ def cmd_status(args):
 
     # 1. Google Antigravity
     print("┌─ [Google Antigravity]")
-    print(f"│  • 5시간 한도 (1P)     : {p_5h:.1f}% (리셋: {reset_5h or '정보 없음'})")
-    print(f"│  • 주간 한도 (1P)      : {p_w:.1f}% (리셋: {reset_w or '정보 없음'})")
+    print(f"│  • 5시간 한도 (1P)     : {p_5h:.1f}% (리셋: {reset_5h or '정보 없음'} · 5시간 슬라이딩 롤링)")
+    print(f"│  • 주간 한도 (1P)      : {p_w:.1f}% (리셋: {reset_w or '정보 없음'} · 주 1회 일괄 충전)")
     if c_3p is not None:
-        print(f"│  • 3P 주간쿼터(Claude/GPT): {c_3p:.1f}% (안티그래비티 내부 모델)")
+        print(f"│  • 3P 주간쿼터(Claude/GPT): {c_3p:.1f}% (안티그래비티 내부 모델 · 주 1회 일괄 충전)")
     print("│")
 
     # 2. GitHub Copilot & GitHub CLI
@@ -164,7 +164,7 @@ def cmd_status(args):
     print("├─ [GitHub Copilot (gh copilot / copilot CLI)]")
     if cp.get("installed") and cp.get("loggedIn"):
         print(f"│  • 연동 계정   : 정상 연동 ({cp.get('user')}) · v{cp.get('version', '1.0')}")
-        print(f"│  • 쿼터 체계   : AI Credits (AIC) / 세션 및 주간 Rate Limit")
+        print(f"│  • 쿼터 체계   : AI Credits (AIC) / 갱신: 월간 결제일 00:00 UTC + 분당 속도 제어")
     elif cp.get("installed"):
         print(f"│  • 연동 상태   : 설치됨 (로그인 필요)")
     else:
@@ -174,7 +174,7 @@ def cmd_status(args):
         core_rem = gh_rate.get("coreRemaining")
         core_lim = gh_rate.get("coreLimit", 5000)
         core_str = f"{core_rem}/{core_lim}" if core_rem is not None else "조회 완료"
-        print(f"│  • GitHub CLI : 정상 연동 ({gh.get('user')}) · 플랫폼 REST API: {core_str} (PR/이슈 관리용)")
+        print(f"│  • GitHub CLI : 정상 연동 ({gh.get('user')}) · REST API: {core_str} (갱신: 1시간 슬라이딩 윈도우)")
     elif gh.get("installed"):
         print(f"│  • GitHub CLI : 설치됨 (인증 대기)")
     else:
@@ -189,6 +189,7 @@ def cmd_status(args):
         plan_info = f" ({cdx.get('plan', 'free').upper()} 플랜)" if cdx.get("plan") else ""
         print(f"│  • 인증 계정  : 정상 연동 · {user_info}{plan_info}")
         print(f"│  • 기본 모델  : {cdx.get('model', 'gpt-6-luna')} (사고 수준: {cdx.get('reasoningEffort', 'medium')})")
+        print(f"│  • 쿼터 체계  : 3시간 슬라이딩 롤링 윈도우 (메시지 캡 순차 회복)")
     elif cdx.get("installed"):
         print(f"│  • 연동 상태  : 설치됨 (인증 필요: codex login)")
     else:
@@ -205,6 +206,7 @@ def cmd_status(args):
         log_str = "정상 연동" if cld.get("loggedIn") else "설치됨 (로그인 대기: claude auth login)"
         print(f"   • 연동 상태  : {log_str}{stats_str}")
         print(f"   • 바이너리  : v{cld.get('version', '2.1.332')}")
+        print(f"   • 쿼터 체계  : 5시간 슬라이딩 롤링 윈도우 (메시지 한도 점진 복원)")
     else:
         print(f"   • 연동 상태  : 미설치")
 

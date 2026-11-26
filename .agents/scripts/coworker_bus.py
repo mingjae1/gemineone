@@ -124,7 +124,8 @@ class CopilotModule(CoworkerModuleSpec):
             "remaining": 1750,
             "limit": 2000,
             "unit": "AIC",
-            "resetDesc": "주간 갱신 / 1 AIC 세션 한도",
+            "resetDesc": "월간 결제일 00:00 UTC 갱신 (분당 롤링)",
+            "refreshMechanism": "월간 구독 갱신 + 분당 속도 제어 롤링",
             "statusText": "연동 활성화",
         }
 
@@ -214,6 +215,7 @@ class GitHubCliModule(CoworkerModuleSpec):
             "limit": lim,
             "unit": "req/hr",
             "resetDesc": "1시간 슬라이딩 갱신",
+            "refreshMechanism": "1시간 고정 슬라이딩 윈도우 (매 1시간마다 5,000회 완충)",
             "statusText": "플랫폼 REST API 정상",
         }
 
@@ -300,7 +302,8 @@ class CodexModule(CoworkerModuleSpec):
             "remaining": 100,
             "limit": 100,
             "unit": "%",
-            "resetDesc": f"구독 유효: {str(status.get('subscriptionUntil'))[:10]}",
+            "resetDesc": f"3시간 슬라이딩 롤링 (구독 유효: {str(status.get('subscriptionUntil'))[:10]})",
+            "refreshMechanism": "3시간 슬라이딩 롤링 윈도우 (메시지 캡 순차 회복)",
             "statusText": f"{status.get('model')} ({status.get('reasoningEffort')}) 가용 정상",
         }
 
@@ -374,7 +377,8 @@ class ClaudeCodeModule(CoworkerModuleSpec):
             "remaining": 100,
             "limit": 100,
             "unit": "%",
-            "resetDesc": "세션 단위 갱신",
+            "resetDesc": "5시간 슬라이딩 롤링",
+            "refreshMechanism": "5시간 슬라이딩 롤링 윈도우 (메시지 한도 점진 복원)",
             "statusText": "정상 가용",
         }
 
