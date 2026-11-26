@@ -2,21 +2,43 @@
   "version": "0.4.0",
   "enabled": true,
   "enforceWorkerForEdits": true,
-  "enableCarbon": false,
-  "carbonFallback": "gemini-4-argon-high",
   "defaultTier": "hydrogen-high",
   "quotaMonitoring": {
     "enabled": true,
     "dailyTokenBaseline": 5000000,
-    "lowQuotaThresholdPercent": 70,
+    "lowQuotaThresholdPercent": 70.0,
     "displayInSummary": true,
     "calibratedLimits": {
-      "fiveHourRemainingPercent": 84.8,
-      "weeklyRemainingPercent": 87.4
+      "fiveHourRemainingPercent": 100.0,
+      "weeklyRemainingPercent": 55.8
     },
     "thresholds": {
-      "fiveHourLimitPercent": 70,
-      "weeklyLimitPercent": 70
+      "fiveHourLimitPercent": 25.0,
+      "weeklyLimitPercent": 25.0
+    },
+    "alertSettings": {
+      "thresholdPercent": 70.0,
+      "fiveHourThresholdPercent": 25.0,
+      "weeklyThresholdPercent": 25.0,
+      "alertScope": "all",
+      "showAgentBreakdown": false,
+      "agents": {
+        "antigravity_5h": {
+          "threshold": 25.0
+        },
+        "antigravity_weekly": {
+          "threshold": 25.0
+        },
+        "claude_3p": {
+          "threshold": 20.0
+        },
+        "copilot": {
+          "threshold": 1.0
+        },
+        "codex": {
+          "threshold": 20.0
+        }
+      }
     }
   },
   "adaptiveEffort": {
@@ -25,7 +47,7 @@
     "rules": [
       {
         "name": "deep_architecture_concurrency",
-        "targetModel": "gemini-4-argon-high",
+        "targetModel": "gemini-4-carbon-high",
         "keywords": [
           "architect",
           "concurrency",
@@ -235,5 +257,6 @@
     "templates",
     ".gitignore",
     "install.bat"
-  ]
+  ],
+  "coordinatorModel": "gemini-3.8-flash-high"
 }

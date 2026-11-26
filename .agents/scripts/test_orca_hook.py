@@ -79,20 +79,20 @@ def test_suite():
         },
         # Adaptive tests with model=None or "auto"
         {
-            "name": "Adaptive: Concurrency / Deadlock / RMI -> gemini-4-argon-high",
+            "name": "Adaptive: Concurrency / Deadlock / RMI -> gemini-4-carbon-high",
             "payload": {
                 "conversationId": "c1",
                 "toolCall": {"name": "swarm", "args": {"action": "add", "model": "auto", "brief": "Investigate RMI distributed deadlock and concurrency race condition"}}
             },
-            "expected_model": "gemini-4-argon-high"
+            "expected_model": "gemini-4-carbon-high"
         },
         {
-            "name": "Adaptive Korean: 동시성 / 아키텍처 -> gemini-4-argon-high",
+            "name": "Adaptive Korean: 동시성 / 아키텍처 -> gemini-4-carbon-high",
             "payload": {
                 "conversationId": "c1",
                 "toolCall": {"name": "swarm", "args": {"action": "add", "brief": "서버 아키텍처 설계 및 분산 동시성 이슈 분석"}}
             },
-            "expected_model": "gemini-4-argon-high"
+            "expected_model": "gemini-4-carbon-high"
         },
         {
             "name": "Adaptive: Complex / Benchmark -> gemini-4-hydrogen-xhigh",
@@ -126,109 +126,39 @@ def test_suite():
             },
             "expected_model": "gemini-4-hydrogen-high"
         },
-        # Carbon Forward-Compatibility tests (default: enableCarbon=false -> graceful fallback)
+        # Carbon tests (first-class standard model family)
         {
-            "name": "Carbon Fallback: Explicit 'carbon' with enableCarbon=false -> gemini-4-argon-high",
+            "name": "Explicit 'carbon' -> gemini-4-carbon-high",
             "payload": {
                 "conversationId": "c1",
                 "toolCall": {"name": "swarm", "args": {"action": "add", "model": "carbon", "brief": "High reasoning task"}}
             },
-            "expected_model": "gemini-4-argon-high"
+            "expected_model": "gemini-4-carbon-high"
         },
         {
-            "name": "Carbon Fallback: Explicit 'gemini-4-carbon' with enableCarbon=false -> gemini-4-argon-high",
+            "name": "Explicit 'gemini-4-carbon' -> gemini-4-carbon-high",
             "payload": {
                 "conversationId": "c1",
                 "toolCall": {"name": "swarm", "args": {"action": "add", "model": "gemini-4-carbon", "brief": "High reasoning task"}}
             },
-            "expected_model": "gemini-4-argon-high"
+            "expected_model": "gemini-4-carbon-high"
         },
     ]
 
     all_passed = True
 
-    # Backup original config & state for hermetic testing
-    orig_cfg = None
-    if os.path.exists(CONFIG_PATH):
-        with open(CONFIG_PATH, "r", encoding="utf-8") as f:
-            orig_cfg = json.load(f)
-    orig_state = None
-    STATE_PATH = os.path.join(BASE_DIR, ".orca-state.json")
-    if os.path.exists(STATE_PATH):
-        with open(STATE_PATH, "r", encoding="utf-8") as f:
-            orig_state = json.load(f)
-
-    try:
-        # 1. Pro-Safe environment tests (hasCarbon=False, enableCarbon=false)
-        if orig_cfg:
-            mock_cfg = dict(orig_cfg)
-            mock_cfg["enableCarbon"] = False
-            with open(CONFIG_PATH, "w", encoding="utf-8") as f:
-                json.dump(mock_cfg, f, indent=2, ensure_ascii=False)
-        if orig_state:
-            mock_state = dict(orig_state)
-            mock_state["hasCarbon"] = False
-            with open(STATE_PATH, "w", encoding="utf-8") as f:
-                json.dump(mock_state, f, indent=2, ensure_ascii=False)
-
-        print("=== ORCA Adaptive Effort Test Suite ===")
-        for t in tests:
-            res = run_hook(t["payload"])
-            actual_model = (
-                res.get("overwrite", {}).get("model")
-                or t["payload"]["toolCall"]["args"].get("model")
-            )
-            if actual_model == t["expected_model"]:
-                print(f"[PASS] {t['name']} -> {actual_model}")
-            else:
-                print(f"[FAIL] {t['name']}: expected {t['expected_model']}, got {actual_model} (res={res})")
-                all_passed = False
-
-        # 2. Carbon Enabled tests (temporarily set enableCarbon=true)
-        print("\n=== Carbon Enabled Environment Tests ===")
-        with open(CONFIG_PATH, "r", encoding="utf-8") as f:
-            cfg = json.load(f)
-        cfg["enableCarbon"] = True
-        with open(CONFIG_PATH, "w", encoding="utf-8") as f:
-            json.dump(cfg, f, indent=2, ensure_ascii=False)
-
-        carbon_tests = [
-            {
-                "name": "Carbon Enabled: Explicit 'carbon' -> gemini-4-carbon-high",
-                "payload": {
-                    "conversationId": "c1",
-                    "toolCall": {"name": "swarm", "args": {"action": "add", "model": "carbon", "brief": "High reasoning task"}}
-                },
-                "expected_model": "gemini-4-carbon-high"
-            },
-            {
-                "name": "Carbon Enabled: Adaptive concurrency task -> gemini-4-carbon-high",
-                "payload": {
-                    "conversationId": "c1",
-                    "toolCall": {"name": "swarm", "args": {"action": "add", "model": "auto", "brief": "분산 아키텍처 및 동시성 데드락 해결"}}
-                },
-                "expected_model": "gemini-4-carbon-high"
-            },
-        ]
-        for t in carbon_tests:
-            res = run_hook(t["payload"])
-            actual_model = (
-                res.get("overwrite", {}).get("model")
-                or t["payload"]["toolCall"]["args"].get("model")
-            )
-            if actual_model == t["expected_model"]:
-                print(f"[PASS] {t['name']} -> {actual_model}")
-            else:
-                print(f"[FAIL] {t['name']}: expected {t['expected_model']}, got {actual_model} (res={res})")
-                all_passed = False
-    finally:
-        # Restore original config & state
-        if orig_cfg:
-            with open(CONFIG_PATH, "w", encoding="utf-8") as f:
-                json.dump(orig_cfg, f, indent=2, ensure_ascii=False)
-        if orig_state:
-            with open(STATE_PATH, "w", encoding="utf-8") as f:
-                json.dump(orig_state, f, indent=2, ensure_ascii=False)
+    print("=== ORCA Adaptive Effort Test Suite ===")
+    for t in tests:
+        res = run_hook(t["payload"])
+        actual_model = (
+            res.get("overwrite", {}).get("model")
+            or t["payload"]["toolCall"]["args"].get("model")
+        )
+        if actual_model == t["expected_model"]:
+            print(f"[PASS] {t['name']} -> {actual_model}")
+        else:
+            print(f"[FAIL] {t['name']}: expected {t['expected_model']}, got {actual_model} (res={res})")
+            all_passed = False
 
     # Test file edit guard
     print("\n=== ORCA Guard File Edit Gating Tests ===")
@@ -254,7 +184,7 @@ def test_suite():
         print(f"[FAIL] Expected allow, got: {allowed_edit}")
         all_passed = False
 
-    total_tests = len(tests) + len(carbon_tests) + 2
+    total_tests = len(tests) + 2
     if all_passed:
         print(f"\nAll {total_tests} tests passed successfully!")
     else:

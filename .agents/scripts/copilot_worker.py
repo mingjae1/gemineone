@@ -15,7 +15,19 @@ import sys
 
 
 def get_copilot_binary():
-    return shutil.which("copilot") or shutil.which("copilot.cmd")
+    b = shutil.which("copilot") or shutil.which("copilot.cmd")
+    if b:
+        return b
+    user_home = os.environ.get("USERPROFILE", os.path.expanduser("~"))
+    local_app_data = os.environ.get("LOCALAPPDATA", os.path.join(user_home, "AppData", "Local"))
+    candidates = [
+        os.path.join(local_app_data, "GitHubCopilotCLI", "copilot.exe"),
+        os.path.join(user_home, ".copilot", "copilot.exe"),
+    ]
+    for c in candidates:
+        if os.path.exists(c):
+            return c
+    return None
 
 
 def get_copilot_db_path():

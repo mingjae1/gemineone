@@ -24,15 +24,13 @@ Thinking effort tiers are adaptive across the Gemini model family to optimize qu
    - Explicitly requested tiers (`low`, `medium`, `high`, `xhigh`) or specific models (e.g. `gemini-4-hydrogen-low`, `gemini-3.8-flash-medium`) are honored directly without forced upgrading.
 2. **Adaptive Auto-Routing (Brief & Keyword Analysis)**:
    - When `model` is omitted or set to `auto`, `orca_hook.py` evaluates the task brief and keywords:
-     - **Deep Architecture / Concurrency (`gemini-4-argon-high`, Carbon 활성화 시 `gemini-4-carbon-high`)**: Distributed systems, RMI, concurrency, race conditions, deadlocks, memory leaks.
+     - **Deep Architecture / Concurrency (`gemini-4-carbon-high`)**: Distributed systems, RMI, concurrency, race conditions, deadlocks, memory leaks.
      - **Complex Implementation / Debug (`gemini-4-hydrogen-xhigh`)**: Large-scale multi-module changes, heavy benchmarks, comprehensive test suites.
      - **Standard Development & Tests (`gemini-4-hydrogen-high`, Default)**: Standard feature implementation, component authoring, unit test loops, and bug fixes.
      - **Light Scripting & Minor Edits (`gemini-4-hydrogen-low`)**: Minor refactoring, script tweaks, simple rename.
      - **Boilerplate / Config / Docs (`gemini-3.8-flash-high`)**: `.gitignore`, formatting, typos, README updates, trivial config.
-3. **Carbon Forward-Compatibility (미래 호환성)**:
-   - `gemini-4-carbon` 패밀리(`low`~`xhigh`) 사전 등록.
-   - `enableCarbon: false` 시 Carbon 요청은 `carbonFallback`(`gemini-4-argon-high`)으로 부드럽게 대체(Graceful Fallback)되어 권한 미보유 환경에서의 에러를 방지합니다.
-   - Carbon이 열려 있는 환경에서는 `enableCarbon: true`로 즉시 풀파워를 발휘합니다.
+3. **Carbon & Neon Native Support**:
+   - `gemini-4-carbon` 패밀리(`low`~`xhigh`) 및 `gemini-4-neon` 전 티어 기본 지원. 별도의 활성화 옵션이나 폴백 없이 모든 스웜 워커에서 자유롭게 호출 가능합니다.
 
 ## 3. Parallel Fan-out for Independent Tasks
 When multiple tasks exist without sequential dependencies:
@@ -48,3 +46,14 @@ When multiple tasks exist without sequential dependencies:
 ## 5. Disciplined Communication
 - Never convert the user's casual conversational metaphors, colloquial expressions (e.g. "티키타카", "한 줄 수정", "뚝딱"), or informal phrasing into forced proper nouns, buzzwords, or formal feature titles.
 - Use standard, disciplined engineering terminology (e.g., feedback loop, cross-verification, atomic fix).
+
+## 6. /orca Private Command Protocol
+Orchestration controls are segregated into settings vs. standalone actions:
+- **Settings & Value Mutation**:
+  - `/orca model`: Inspect and configure the main coordinator model and coworker/worker model tiers (`orca_models.html`).
+  - `/orca setting` (or `/orca settings`): Renders the interactive inline Settings UI widget (`orca_settings.html`) for visual configuration of quota thresholds, alert scope (`all` vs `low_only`), and default tiers.
+- **Standalone Actions & Status**:
+  - `/orca status`: Fast read-only overview of active models, live quota, and connected external subagents.
+  - `/orca quota`: Outputs the real-time dual quota telemetry footer.
+  - `/orca sync`: Re-probes and synchronizes available Gemini models and account capabilities.
+  - `/orca help`: Displays command index and quick cheat sheet.

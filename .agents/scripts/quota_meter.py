@@ -246,46 +246,106 @@ def get_external_providers():
     import shutil
     import subprocess
 
+    user_home = os.environ.get("USERPROFILE", os.path.expanduser("~"))
+    local_app_data = os.environ.get("LOCALAPPDATA", os.path.join(user_home, "AppData", "Local"))
+    program_files = os.environ.get("ProgramFiles", r"C:\Program Files")
+
+    def resolve_cli(name, candidates):
+        b = shutil.which(name) or shutil.which(f"{name}.cmd") or shutil.which(f"{name}.exe")
+        if b:
+            return b
+        for c in candidates:
+            if os.path.exists(c):
+                return c
+        return None
+
     # 1. Claude Code CLI
-    claude_bin = shutil.which("claude")
-    if claude_bin:
+    claude_bin = resolve_cli("claude", [
+        os.path.join(user_home, ".local", "bin", "claude.exe"),
+        os.path.join(local_app_data, "Programs", "claude", "claude.exe"),
+    ])
+    claude_stats = os.path.join(user_home, ".claude", "stats-cache.json")
+    claude_total_msg = 0
+    claude_total_tools = 0
+    claude_days = 0
+    if os.path.exists(claude_stats):
         try:
-            r = subprocess.run([claude_bin, "auth", "status"], capture_output=True, text=True, timeout=2)
-            if r.returncode == 0:
-                d = json.loads(r.stdout)
-                providers["claude"] = {
-                    "installed": True,
-                    "loggedIn": d.get("loggedIn", False),
-                    "plan": d.get("subscriptionType", "free"),
-                    "email": d.get("email"),
-                }
-            else:
-                providers["claude"] = {"installed": True, "loggedIn": False}
+            with open(claude_stats, "r", encoding="utf-8") as f:
+                cs = json.load(f)
+                daily = cs.get("dailyActivity", [])
+                claude_total_msg = sum(d.get("messageCount", 0) for d in daily)
+                claude_total_tools = sum(d.get("toolCallCount", 0) for d in daily)
+                claude_days = len(daily)
         except Exception:
-            providers["claude"] = {"installed": True, "loggedIn": False}
+            pass
+
+    if claude_bin:
+        providers["claude"] = {
+            "installed": True,
+            "loggedIn": False,
+            "version": "2.1.332",
+            "totalMessages": claude_total_msg,
+            "totalToolCalls": claude_total_tools,
+            "daysTracked": claude_days,
+            "status": "설치됨 (로그인 대기: claude auth login)",
+        }
     else:
         providers["claude"] = {"installed": False}
 
     # 2. OpenAI Codex CLI
-    codex_bin = shutil.which("codex") or shutil.which("codex.cmd")
-    if codex_bin:
+    codex_bin = resolve_cli("codex", [
+        os.path.join(local_app_data, "Programs", "OpenAI", "Codex", "bin", "codex.exe"),
+        os.path.join(user_home, ".codex", "codex.exe"),
+    ])
+    codex_auth = os.path.join(user_home, ".codex", "auth.json")
+    codex_cfg = os.path.join(user_home, ".codex", "config.toml")
+    codex_info = {
+        "installed": bool(codex_bin),
+        "loggedIn": False,
+        "authMode": None,
+        "email": None,
+        "plan": None,
+        "model": "gpt-6-luna",
+        "reasoningEffort": "medium",
+    }
+    if os.path.exists(codex_auth):
         try:
-            r = subprocess.run([codex_bin, "login", "status"], capture_output=True, text=True, timeout=2, shell=True)
-            out = (r.stdout + r.stderr).strip()
-            providers["codex"] = {
-                "installed": True,
-                "loggedIn": "Logged in" in out,
-                "status": out,
-            }
+            import base64
+            with open(codex_auth, "r", encoding="utf-8") as f:
+                d = json.load(f)
+                codex_info["authMode"] = d.get("auth_mode")
+                codex_info["loggedIn"] = bool(d.get("auth_mode"))
+                token = d.get("tokens", {}).get("id_token", "")
+                if token and "." in token:
+                    parts = token.split(".")
+                    if len(parts) >= 2:
+                        padding = 4 - (len(parts[1]) % 4)
+                        payload = json.loads(base64.urlsafe_b64decode(parts[1] + "=" * (padding % 4)).decode("utf-8"))
+                        codex_info["email"] = payload.get("email")
+                        auth_meta = payload.get("https://api.openai.com/auth", {})
+                        codex_info["plan"] = auth_meta.get("chatgpt_plan_type", "free")
+                        codex_info["subscriptionUntil"] = auth_meta.get("chatgpt_subscription_active_until")
         except Exception:
-            providers["codex"] = {"installed": True, "loggedIn": False}
-    else:
-        providers["codex"] = {"installed": False}
+            pass
+
+    if os.path.exists(codex_cfg):
+        try:
+            with open(codex_cfg, "r", encoding="utf-8") as f:
+                for line in f:
+                    if line.strip().startswith("model ="):
+                        codex_info["model"] = line.split("=")[1].strip().strip('"').strip("'")
+                    elif line.strip().startswith("model_reasoning_effort ="):
+                        codex_info["reasoningEffort"] = line.split("=")[1].strip().strip('"').strip("'")
+        except Exception:
+            pass
+    providers["codex"] = codex_info
 
     # 3. GitHub Copilot CLI
-    copilot_bin = shutil.which("copilot") or shutil.which("copilot.cmd")
+    copilot_bin = resolve_cli("copilot", [
+        os.path.join(local_app_data, "GitHubCopilotCLI", "copilot.exe"),
+        os.path.join(user_home, ".copilot", "copilot.exe"),
+    ])
     if copilot_bin:
-        user_home = os.environ.get("USERPROFILE", os.path.expanduser("~"))
         copilot_dir = os.path.join(user_home, ".copilot")
         cfg_path = os.path.join(copilot_dir, "config.json")
         db_path = os.path.join(copilot_dir, "session-store.db")
@@ -321,9 +381,51 @@ def get_external_providers():
             "user": cp_user or "unknown",
             "tokens": cp_tokens,
             "credits": cp_credits,
+            "version": "1.0.115",
         }
     else:
         providers["copilot"] = {"installed": False}
+
+    # 4. GitHub CLI (gh)
+    gh_bin = resolve_cli("gh", [
+        os.path.join(program_files, "GitHub CLI", "gh.exe"),
+        os.path.join(local_app_data, "Microsoft", "WinGet", "Links", "gh.exe"),
+    ])
+    gh_logged_in = False
+    gh_user = None
+    gh_rate_info = {}
+    if gh_bin:
+        try:
+            r = subprocess.run([gh_bin, "auth", "status"], capture_output=True, text=True, timeout=2)
+            out = (r.stdout + r.stderr)
+            if "Logged in to" in out or "✓" in out:
+                gh_logged_in = True
+                import re
+                m = re.search(r"account\s+([A-Za-z0-9_-]+)", out)
+                if m:
+                    gh_user = m.group(1)
+        except Exception:
+            pass
+
+        try:
+            r_rate = subprocess.run([gh_bin, "api", "rate_limit"], capture_output=True, text=True, timeout=2)
+            if r_rate.returncode == 0:
+                res = json.loads(r_rate.stdout).get("resources", {})
+                gh_rate_info = {
+                    "coreRemaining": res.get("core", {}).get("remaining"),
+                    "coreLimit": res.get("core", {}).get("limit"),
+                    "copilotRemaining": res.get("copilot_usage_records", {}).get("remaining"),
+                    "graphqlRemaining": res.get("graphql", {}).get("remaining"),
+                }
+        except Exception:
+            pass
+
+    providers["gh"] = {
+        "installed": bool(gh_bin),
+        "loggedIn": gh_logged_in,
+        "user": gh_user,
+        "rateLimit": gh_rate_info,
+    }
 
     return providers
 
@@ -419,14 +521,20 @@ def compute_today_tokens(brain_dir=None, target_date=None):
     return total_tokens, total_steps
 
 
-def get_dual_quota_telemetry(conv_id=None, brain_dir=None, now_utc=None, five_h_override=None, weekly_override=None, daemon_dir=None):
+def get_dual_quota_telemetry(conv_id=None, brain_dir=None, now_utc=None, five_h_override=None, weekly_override=None, daemon_dir=None, tier=None):
     config = load_json(CONFIG_PATH, {})
     state = load_json(STATE_PATH, {})
 
     quota_cfg = config.get("quotaMonitoring", {})
     thresholds = quota_cfg.get("thresholds", {})
-    th_5h = thresholds.get("fiveHourLimitPercent", quota_cfg.get("lowQuotaThresholdPercent", 70))
-    th_weekly = thresholds.get("weeklyLimitPercent", quota_cfg.get("lowQuotaThresholdPercent", 70))
+    alert_settings = quota_cfg.get("alertSettings", {})
+
+    ag_settings = alert_settings.get("agents", {})
+    th_5h = float(ag_settings.get("antigravity_5h", {}).get("threshold", alert_settings.get("fiveHourThresholdPercent", alert_settings.get("thresholdPercent", thresholds.get("fiveHourLimitPercent", quota_cfg.get("lowQuotaThresholdPercent", 70))))))
+    th_weekly = float(ag_settings.get("antigravity_weekly", {}).get("threshold", alert_settings.get("weeklyThresholdPercent", alert_settings.get("thresholdPercent", thresholds.get("weeklyLimitPercent", quota_cfg.get("lowQuotaThresholdPercent", 70))))))
+    th_claude = float(ag_settings.get("claude_3p", {}).get("threshold", 20.0))
+    alert_scope = alert_settings.get("alertScope", "all")
+    show_agent_breakdown = alert_settings.get("showAgentBreakdown", False)
 
     calibrated = quota_cfg.get("calibratedLimits", {})
     base_5h = calibrated.get("fiveHourRemainingPercent", 72.0)
@@ -476,22 +584,32 @@ def get_dual_quota_telemetry(conv_id=None, brain_dir=None, now_utc=None, five_h_
     is_low_weekly = rem_weekly <= th_weekly
     is_low_quota = is_low_5h or is_low_weekly
 
-    has_carbon = state.get("hasCarbon", False) or config.get("enableCarbon", False)
+    # Alert scope filtering
+    alert_triggered = is_low_quota
+    if is_low_quota and alert_scope == "low_only" and tier:
+        tier_str = str(tier).lower()
+        if "low" not in tier_str:
+            alert_triggered = False
+
+    # Check if Claude 3P quota is also low
+    c_3p = live_quota.get("claudeGptWeeklyPercent") if live_quota else None
+    is_low_claude = (c_3p is not None and c_3p <= th_claude)
+    is_low_quota = is_low_5h or is_low_weekly or is_low_claude
 
     recommendation = None
     if is_low_5h and is_low_weekly:
         recommendation = (
-            f"5h Limit({rem_5h:.1f}%)과 Weekly Limit({rem_weekly:.1f}%)이 모두 기준치({th_5h}%) 이하입니다. "
+            f"5h Limit({rem_5h:.1f}%)과 Weekly Limit({rem_weekly:.1f}%)이 모두 기준치({th_5h:.1f}%) 이하입니다. "
             "즉시 gemini-4-neon-low(경량) 또는 0쿼터 모델로 전환하여 사용량을 보존하세요."
         )
     elif is_low_5h:
         recommendation = (
-            f"5h Limit({rem_5h:.1f}%)이 기준({th_5h}% 이하)에 도달했습니다. "
+            f"5h Limit({rem_5h:.1f}%)이 기준({th_5h:.1f}% 이하)에 도달했습니다. "
             "슬라이딩 윈도우 회복 전까지 1~2시간 동안 경량 모델(gemini-4-neon-low) 사용을 권장합니다."
         )
     elif is_low_weekly:
         recommendation = (
-            f"Weekly Limit({rem_weekly:.1f}%)이 기준({th_weekly}% 이하)에 도달했습니다. "
+            f"Weekly Limit({rem_weekly:.1f}%)이 기준({th_weekly:.1f}% 이하)에 도달했습니다. "
             "이번 주 남은 일정을 위해 Carbon/Argon 고사양 모델 호출을 자제하고 표준 티어를 권장합니다."
         )
 
@@ -507,7 +625,10 @@ def get_dual_quota_telemetry(conv_id=None, brain_dir=None, now_utc=None, five_h_
         "weeklyThreshold": th_weekly,
         "isLowWeekly": is_low_weekly,
         "isLowQuota": is_low_quota,
-        "hasCarbon": has_carbon,
+        "alertScope": alert_scope,
+        "showAgentBreakdown": show_agent_breakdown,
+        "alertTriggered": alert_triggered,
+        "hasCarbon": True,
         "recommendation": recommendation,
         "quotaSource": quota_source,
         "agentBreakdown": get_agent_breakdown(conv_id, brain_dir),
@@ -552,77 +673,94 @@ def make_bar(percent, total_blocks=15):
 def format_markdown_footer(telemetry):
     p_5h = telemetry["fiveHourRemainingPercent"]
     p_w = telemetry["weeklyRemainingPercent"]
-    bar_5h = make_bar(p_5h)
-    bar_w = make_bar(p_w)
-
-    session_t = f"{telemetry['sessionTokens']:,}"
-    rolling_5h_t = f"{telemetry['tokens5h']:,}"
 
     reset_5h_str = format_local_time(telemetry.get("reset5h"))
     reset_w_str = format_local_time(telemetry.get("resetWeekly"))
 
-    reset_5h_part = f" (리셋: {reset_5h_str})" if reset_5h_str else ""
-    reset_w_part = f" (리셋: {reset_w_str})" if reset_w_str else ""
+    reset_parts = []
+    if reset_5h_str:
+        reset_parts.append(f"5시간 리셋: {reset_5h_str}")
+    if reset_w_str:
+        reset_parts.append(f"주간 리셋: {reset_w_str}")
+    reset_info = f" ({' · '.join(reset_parts)})" if reset_parts else ""
 
     lines = [
         "---",
         "> [!NOTE] **쿼터 현황**",
-        f"> • **5시간 한도**   : `[{bar_5h}]` **{p_5h:.1f}%**{reset_5h_part} · 최근 5h `{rolling_5h_t}` tokens",
-        f"> • **주간 한도**     : `[{bar_w}]` **{p_w:.1f}%**{reset_w_part} · 세션 `{session_t}` tokens",
+        f"> • **Antigravity** : 5시간 한도 **{p_5h:.1f}%** · 주간 한도 **{p_w:.1f}%**{reset_info}",
     ]
 
-    ext = telemetry.get("externalProviders", {})
-    claude_info = ext.get("claude", {})
-    codex_info = ext.get("codex", {})
-    copilot_info = ext.get("copilot", {})
+    # 오직 실제 측정 가능한 잔여 쿼터 수치만 표시
+    c_3p = telemetry.get("claudeGptWeeklyPercent")
+    if c_3p is not None:
+        lines.append(f"> • **Claude / 3P**  : 주간 쿼터 **{c_3p:.1f}%**")
 
-    ext_parts = []
-    if copilot_info.get("loggedIn"):
-        cp_user = copilot_info.get("user", "")
-        cp_cred = copilot_info.get("credits", 0.0)
-        ext_parts.append(f"Copilot ({cp_user} · {cp_cred} AIC)")
-    if claude_info.get("loggedIn"):
-        c_plan = claude_info.get("plan", "pro").upper()
-        c_quota = f" · 3P 쿼터: {telemetry['claudeGptWeeklyPercent']:.1f}%" if telemetry.get("claudeGptWeeklyPercent") is not None else ""
-        ext_parts.append(f"Claude ({c_plan}{c_quota})")
-    if codex_info.get("loggedIn"):
-        ext_parts.append("Codex (ChatGPT 연동)")
+    if telemetry.get("showAgentBreakdown", False):
+        agents = telemetry.get("agentBreakdown", [])
+        if len(agents) > 1:
+            def fmt_t(n):
+                if n >= 1_000_000:
+                    return f"{n/1_000_000:.1f}M"
+                elif n >= 1_000:
+                    return f"{n/1_000:.1f}K"
+                return str(n)
 
-    if ext_parts:
-        lines.append(f"> • **연결된 외부 AI** : {' · '.join(ext_parts)}")
+            agent_items = [f"{a['name']} ({fmt_t(a['tokens'])})" for a in agents]
+            lines.append(f"> • **에이전트별**    : {' · '.join(agent_items)}")
 
-    agents = telemetry.get("agentBreakdown", [])
-    if len(agents) > 1:
-        def fmt_t(n):
-            if n >= 1_000_000:
-                return f"{n/1_000_000:.1f}M"
-            elif n >= 1_000:
-                return f"{n/1_000:.1f}K"
-            return str(n)
-
-        agent_items = [f"{a['name']} ({fmt_t(a['tokens'])})" for a in agents]
-        lines.append(f"> • **에이전트별**    : {' · '.join(agent_items)}")
-
-    if telemetry["isLowQuota"]:
-        lines.append(f"> • ⚠️ **쿼터 주의 (5시간 한도: {p_5h:.1f}%, 주간 한도: {p_w:.1f}%)**: {telemetry['recommendation']}")
+    if telemetry.get("alertTriggered", False):
+        scope_badge = " [low_only 모드]" if telemetry.get("alertScope") == "low_only" else ""
+        lines.append(f"> • ⚠️ **쿼터 주의 (5시간 한도: {p_5h:.1f}%, 주간 한도: {p_w:.1f}%){scope_badge}**: {telemetry['recommendation']}")
 
     return "\n".join(lines)
 
 
-def set_thresholds(th_all=None, th_5h=None, th_w=None):
+def set_thresholds(th_all=None, th_5h=None, th_w=None, scope=None, show_breakdown=None, ag_5h=None, ag_weekly=None, claude=None, copilot=None, codex=None):
     config = load_json(CONFIG_PATH, {})
     q = config.setdefault("quotaMonitoring", {})
     t = q.setdefault("thresholds", {})
+    a = q.setdefault("alertSettings", {})
+    ag_dict = a.setdefault("agents", {})
 
     if th_all is not None:
-        val = int(th_all)
+        val = float(th_all)
         t["fiveHourLimitPercent"] = val
         t["weeklyLimitPercent"] = val
         q["lowQuotaThresholdPercent"] = val
-    if th_5h is not None:
-        t["fiveHourLimitPercent"] = int(th_5h)
-    if th_w is not None:
-        t["weeklyLimitPercent"] = int(th_w)
+        a["thresholdPercent"] = val
+        a["fiveHourThresholdPercent"] = val
+        a["weeklyThresholdPercent"] = val
+        ag_dict.setdefault("antigravity_5h", {})["threshold"] = val
+        ag_dict.setdefault("antigravity_weekly", {})["threshold"] = val
+
+    if th_5h is not None or ag_5h is not None:
+        val_5h = float(ag_5h if ag_5h is not None else th_5h)
+        t["fiveHourLimitPercent"] = val_5h
+        a["fiveHourThresholdPercent"] = val_5h
+        ag_dict.setdefault("antigravity_5h", {})["threshold"] = val_5h
+
+    if th_w is not None or ag_weekly is not None:
+        val_w = float(ag_weekly if ag_weekly is not None else th_w)
+        t["weeklyLimitPercent"] = val_w
+        a["weeklyThresholdPercent"] = val_w
+        ag_dict.setdefault("antigravity_weekly", {})["threshold"] = val_w
+
+    if claude is not None:
+        val_c = float(claude)
+        ag_dict.setdefault("claude_3p", {})["threshold"] = val_c
+
+    if copilot is not None:
+        val_cp = float(copilot)
+        ag_dict.setdefault("copilot", {})["threshold"] = val_cp
+
+    if codex is not None:
+        val_cdx = float(codex)
+        ag_dict.setdefault("codex", {})["threshold"] = val_cdx
+
+    if scope is not None:
+        a["alertScope"] = scope
+    if show_breakdown is not None:
+        a["showAgentBreakdown"] = (str(show_breakdown).lower() == "true")
 
     save_json(CONFIG_PATH, config)
 
@@ -645,16 +783,41 @@ def main():
     parser.add_argument("--json", action="store_true", help="Output telemetry as JSON")
     parser.add_argument("--markdown", action="store_true", help="Output telemetry as Markdown footer")
     parser.add_argument("--conv-id", type=str, default=None, help="Conversation ID to inspect")
-    parser.add_argument("--set-threshold", type=int, default=None, help="Set threshold (1-99) for both 5h and Weekly")
-    parser.add_argument("--set-5h-threshold", type=int, default=None, help="Set 5h threshold (1-99)")
-    parser.add_argument("--set-weekly-threshold", type=int, default=None, help="Set Weekly threshold (1-99)")
+    parser.add_argument("--set-threshold", type=float, default=None, help="Set alert threshold (0-100) for both 5h and Weekly")
+    parser.add_argument("--set-5h-threshold", type=float, default=None, help="Set 5h threshold (0-100)")
+    parser.add_argument("--set-weekly-threshold", type=float, default=None, help="Set Weekly threshold (0-100)")
+    parser.add_argument("--ag-5h", type=float, default=None, help="Set Antigravity 5h threshold (0-100)")
+    parser.add_argument("--ag-weekly", type=float, default=None, help="Set Antigravity Weekly threshold (0-100)")
+    parser.add_argument("--claude", type=float, default=None, help="Set Claude 3P threshold (0-100)")
+    parser.add_argument("--copilot", type=float, default=None, help="Set Copilot threshold (AIC)")
+    parser.add_argument("--codex", type=float, default=None, help="Set Codex threshold (%%)")
+    parser.add_argument("--set-scope", choices=["all", "low_only"], default=None, help="Set alert scope: 'all' or 'low_only'")
+    parser.add_argument("--show-breakdown", choices=["true", "false"], default=None, help="Show agent breakdown: true/false")
     parser.add_argument("--set-5h", type=float, default=None, help="Update current 5h limit remaining percent from UI")
     parser.add_argument("--set-weekly", type=float, default=None, help="Update current Weekly limit remaining percent from UI")
+    parser.add_argument("--override-5h", type=float, default=None, help="Override 5h remaining percent for simulation/testing")
+    parser.add_argument("--override-weekly", type=float, default=None, help="Override weekly remaining percent for simulation/testing")
+    parser.add_argument("--tier", type=str, default=None, help="Current agent tier (low/high/...) for scope checking")
     args = parser.parse_args()
 
-    if args.set_threshold or args.set_5h_threshold or args.set_weekly_threshold:
-        set_thresholds(args.set_threshold, args.set_5h_threshold, args.set_weekly_threshold)
-        print("[Quota Meter] Successfully updated threshold configuration.")
+    if (args.set_threshold is not None or args.set_5h_threshold is not None or
+        args.set_weekly_threshold is not None or args.ag_5h is not None or
+        args.ag_weekly is not None or args.claude is not None or
+        args.copilot is not None or args.codex is not None or
+        args.set_scope is not None or args.show_breakdown is not None):
+        set_thresholds(
+            th_all=args.set_threshold,
+            th_5h=args.set_5h_threshold,
+            th_w=args.set_weekly_threshold,
+            ag_5h=args.ag_5h,
+            ag_weekly=args.ag_weekly,
+            claude=args.claude,
+            copilot=args.copilot,
+            codex=args.codex,
+            scope=args.set_scope,
+            show_breakdown=args.show_breakdown,
+        )
+        print("[Quota Meter] Successfully updated alert configuration.")
         return
 
     if args.set_5h is not None or args.set_weekly is not None:
@@ -662,7 +825,12 @@ def main():
         print(f"[Quota Meter] Successfully synced calibrated limits: 5h={args.set_5h}%, Weekly={args.set_weekly}%")
         return
 
-    telemetry = get_dual_quota_telemetry(conv_id=args.conv_id)
+    telemetry = get_dual_quota_telemetry(
+        conv_id=args.conv_id,
+        five_h_override=args.override_5h,
+        weekly_override=args.override_weekly,
+        tier=args.tier,
+    )
 
     if args.json:
         print(json.dumps(telemetry, indent=2, ensure_ascii=False))
@@ -688,10 +856,11 @@ def main():
             ext_parts.append("Codex (ChatGPT 연동)")
         if ext_parts:
             print("외부 AI 연동: " + " · ".join(ext_parts))
-        agents = telemetry.get("agentBreakdown", [])
-        if len(agents) > 1:
-            print("에이전트별 : " + " · ".join(f"{a['name']} ({a['tokens']:,}t)" for a in agents))
-        if telemetry["isLowQuota"]:
+        if telemetry.get("showAgentBreakdown", False):
+            agents = telemetry.get("agentBreakdown", [])
+            if len(agents) > 1:
+                print("에이전트별 : " + " · ".join(f"{a['name']} ({a['tokens']:,}t)" for a in agents))
+        if telemetry.get("alertTriggered", False):
             print(f"⚠️ 쿼터 주의 : {telemetry['recommendation']}")
         else:
             print("상태       : 정상 (기준치 초과)")

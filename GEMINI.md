@@ -46,6 +46,7 @@
 - Verification loop: State plan -> Implement -> Verify (build/test) -> Report.
 - **Quota Telemetry Footer**: At the conclusion of major swarm task reports, provide real-time resource telemetry via `python .agents/scripts/quota_meter.py --markdown`. When remaining quota is low (<=25%), explicitly alert the user and recommend switching to lightweight models (`gemini-4-neon-low`) or 0-quota offline models.
 - **No Forced Jargon / Slang Proper Nouns**: Never convert the user's casual conversational metaphors, colloquial expressions (e.g. "티키타카", "한 줄 수정", "뚝딱"), or informal phrasing into forced proper nouns, buzzwords, or formal feature titles. Use standard, disciplined engineering terminology (e.g., feedback loop, cross-verification, atomic fix).
+- **Clean Single-Language Communication**: Avoid redundant bilingual dual-labeling (e.g., writing both Korean and English side-by-side like "5시간 한도 (5-Hour Limit)" or "기준치 (Threshold)"). Communicate naturally and directly in clean Korean without unnecessary parenthetical English translations.
 
 ## 2. 1D Direct Chat & Fast Intake (`gemini-3.8-flash-high`)
 - All direct user conversations run on `gemini-3.8-flash-high` as the coordinator.
@@ -63,7 +64,7 @@
      - `boilerplate_config_docs` (단순 설정/.gitignore/README/포맷팅): `gemini-3.8-flash-high`
   3. **Neon & Carbon 지원 (최신 릴리즈 및 미래 호환성)**:
      - Antigravity 1.5.12 패치로 추가된 **`gemini-4-neon` 패밀리(Low~XHigh, Orchestrator)** 전 티어 완벽 지원.
-     - `gemini-4-carbon` 패밀리 전면 활성화 (전체 사용자 대상 오픈 및 `enableCarbon: true` 표준화).
+     - `gemini-4-carbon` 패밀리 표준화 (별도의 활성화 옵션이나 제한 없이 기본 모델 라인업으로 완전 개방).
 - `.agents/hooks.json` automatically blocks coordinator direct file edits outside exempt paths and transparently routes swarm workers to the appropriate adaptive model tier.
 
 ## 4. Parallel Fan-out for Independent Tasks
@@ -73,3 +74,15 @@
 ## 5. Git & Verification Loop
 - Push Policy: Do NOT push on every minor test/edit. On major milestones, confirm with user before running `git push`.
 - Never run `git reset --hard` or `git clean` without asking.
+
+## 6. /orca Private Command Protocol
+To prevent command collisions and maintain disciplined UX, orchestration controls are strictly separated into value mutation vs. standalone actions:
+- **Settings & Value Mutation**:
+  - `/orca model`: Inspect and configure the main coordinator model and coworker/worker model tiers (`orca_models.html`).
+  - `/orca setting` (or `/orca settings`): Renders the interactive inline Settings UI widget (`orca_settings.html`), allowing visual adjustment of quota alert thresholds (5h/weekly), alert scope (`all` vs `low_only`), and model tiers.
+- **Standalone Actions & Status (자주 사용하는 독립 명령어)**:
+  - `/orca status`: Fast read-only inspection of active models, live quota, and connected external AI (Copilot, Codex, Claude, GitHub CLI).
+  - `/orca quota`: Outputs the real-time dual quota telemetry footer.
+  - `/orca sync`: Probes and synchronizes available Gemini models and account capabilities via `sync_models.py`.
+  - `/orca help`: Displays the command index and usage cheat sheet.
+

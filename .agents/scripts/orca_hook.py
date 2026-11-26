@@ -99,11 +99,6 @@ def resolve_worker_model(req_model, tool_args, config, state=None):
     allowed_models = set(config.get("allowedWorkerModels", []))
     default_tier = config.get("defaultTier", "hydrogen-high")
     fallback_model = tiers.get(default_tier, "gemini-4-hydrogen-high")
-
-    # Determine Carbon capability safely:
-    # Machine-local capability (.orca-state.json) or explicit config override
-    enable_carbon = state.get("hasCarbon", False) or config.get("enableCarbon", False)
-    carbon_fallback = config.get("carbonFallback", "gemini-4-argon-high")
     live_models = state.get("liveModels")
 
     req_norm = req_model.strip().lower() if req_model else ""
@@ -121,16 +116,11 @@ def resolve_worker_model(req_model, tool_args, config, state=None):
             detail = req_model
 
         if candidate:
-            # Check if Carbon is targeted but disabled on this machine/account
-            if "carbon" in candidate.lower() and not enable_carbon:
-                return carbon_fallback, "carbon_fallback_disabled", f"{candidate}->{carbon_fallback}"
-
             # If live account inventory is known and candidate is not supported on this account,
-            # gracefully fall back to prevent platform tool execution failure (unless Carbon is explicitly enabled)
+            # gracefully fall back to default worker model
             if live_models and candidate not in live_models:
-                if not ("carbon" in candidate.lower() and enable_carbon):
-                    safe_fallback = carbon_fallback if ("opus" in candidate or "argon" in candidate or "carbon" in candidate) else fallback_model
-                    return safe_fallback, "live_model_fallback_unsupported", f"{candidate}->{safe_fallback}"
+                safe_fallback = fallback_model
+                return safe_fallback, "live_model_fallback_unsupported", f"{candidate}->{safe_fallback}"
 
             return candidate, "explicit_alias" if req_norm in tiers else "explicit_allowed_model", detail
 
@@ -146,9 +136,6 @@ def resolve_worker_model(req_model, tool_args, config, state=None):
             keywords = rule.get("keywords", [])
             for kw in keywords:
                 if kw.lower() in combined_text:
-                    # Dynamically escalate to Carbon if enabled on deep architecture tasks
-                    if rule.get("name") == "deep_architecture_concurrency" and enable_carbon:
-                        return "gemini-4-carbon-high", "adaptive_carbon_escalation", f"{rule.get('name')}:{kw}"
                     return target_model, "adaptive_keyword_match", f"{rule.get('name')}:{kw}"
 
         adaptive_default = adaptive_cfg.get("defaultModel", fallback_model)

@@ -226,7 +226,7 @@ def test_genesis_fresh_mock_workspace():
 
         with open(cfg_path, "r", encoding="utf-8") as f:
             cfg = json.load(f)
-        assert_true(cfg.get("enableCarbon") is False, "Shared orca-config.json must remain Pro-Safe")
+        assert_true("enableCarbon" not in cfg, "enableCarbon option removed as Carbon is standard")
         assert_true(len(cfg.get("allowedWorkerModels", [])) > 0, "allowedWorkerModels must not be empty")
 
         # 6. Verify transition into Production Orchestrator Mode via installed orca_hook.py
@@ -246,10 +246,9 @@ def test_genesis_fresh_mock_workspace():
             },
         )
         assert_true(res_arch.get("decision") == "allow", f"Expected allow, got {res_arch}")
-        expected_arch = "gemini-4-carbon-high" if state.get("hasCarbon") else "gemini-4-argon-high"
         assert_true(
-            res_arch.get("overwrite", {}).get("model") == expected_arch,
-            f"Expected {expected_arch}, got {res_arch}",
+            res_arch.get("overwrite", {}).get("model") == "gemini-4-carbon-high",
+            f"Expected gemini-4-carbon-high, got {res_arch}",
         )
 
         res_docs = run_hook_in_workspace(
