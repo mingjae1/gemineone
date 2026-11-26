@@ -337,13 +337,19 @@
     </div>
 
     <!-- 7. 하단 명령어 미리보기 및 액션 버튼 -->
-    <div class="border-t border-[var(--card-border)] pt-2 flex items-center justify-between text-[11px]">
-      <div id="cmd-preview" class="font-mono text-[9px] text-[var(--muted-foreground)] truncate max-w-sm">
-        python .agents/scripts/orca.py setting
+    <div class="border-t border-[var(--card-border)] pt-2 space-y-1.5">
+      <div class="flex items-center justify-between text-[11px]">
+        <div id="cmd-preview" class="font-mono text-[9px] text-[var(--muted-foreground)] truncate max-w-sm">
+          python .agents/scripts/orca.py setting
+        </div>
+        <button id="btn-apply" class="px-2.5 py-1 rounded bg-[var(--primary)] text-[var(--primary-foreground)] text-[10px] font-medium hover:opacity-90 transition-opacity flex-shrink-0">
+          명령어 복사
+        </button>
       </div>
-      <button id="btn-apply" class="px-2.5 py-1 rounded bg-[var(--primary)] text-[var(--primary-foreground)] text-[10px] font-medium hover:opacity-90 transition-opacity flex-shrink-0">
-        설정 복사
-      </button>
+      <div class="text-[9px] text-[var(--muted-foreground)] flex items-center justify-between">
+        <span>💡 <b>즉시 저장</b>: 터미널에서 <code class="font-mono bg-[var(--surface-variant,rgba(0,0,0,0.06))] px-1 py-0.5 rounded">.\orca-settings.bat</code> 실행 또는 대화창에 지시</span>
+        <span class="text-emerald-600 dark:text-emerald-400 font-medium">원클릭 영구 저장 지원</span>
+      </div>
     </div>
 
   </div>

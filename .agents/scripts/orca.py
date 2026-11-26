@@ -290,6 +290,19 @@ def cmd_setting(args):
         print("[ORCA] Settings successfully updated.")
 
     if getattr(args, "ui", False):
+        gui_py = os.path.join(SCRIPT_DIR, "orca_gui.py")
+        if os.path.exists(gui_py):
+            try:
+                # 백그라운드 프로세스로 네이티브 GUI 실행 (비동기 팝업)
+                if sys.platform == "win32":
+                    subprocess.Popen([sys.executable, gui_py], creationflags=0x00000008 | 0x00000200) # DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP
+                else:
+                    subprocess.Popen([sys.executable, gui_py], close_fds=True)
+                print("[ORCA UI] 로컬 GUI 설정 허브(orca_gui.py)를 실행했습니다. 창에서 설정을 변경하면 즉시 파일에 저장됩니다.")
+                return
+            except Exception as e:
+                print(f"[ORCA UI] GUI 팝업 실패 ({e}), 브라우저 UI로 대체합니다.")
+
         import webbrowser
         target_dir, staged = stage_ui_artifacts()
         settings_html = os.path.join(UI_DIR, "orca_settings.html")
