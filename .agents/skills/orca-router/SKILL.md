@@ -50,8 +50,8 @@ When multiple tasks exist without sequential dependencies:
 ## 6. /orca Private Command Protocol
 Orchestration controls are segregated into settings vs. standalone actions:
 - **Settings & Value Mutation**:
-  - `/orca model`: Inspect and configure the main coordinator model and coworker/worker model tiers (`orca_models.html`).
-  - `/orca setting` (or `/orca settings`): Renders the interactive inline Settings UI widget (`orca_settings.html`) for visual configuration of quota thresholds, alert scope (`all` vs `low_only`), and default tiers.
+  - `/orca model`: Inspect and configure the main coordinator model and coworker/worker model tiers via `orca.py model`.
+  - `/orca setting` (or `/orca settings`): Fast terminal/console inspection and direct CLI adjustment of quota alert thresholds (5h/weekly), alert scope (`all` vs `low_only`), and model tiers via `orca.py setting`.
 - **Standalone Actions & Status**:
   - `/orca status`: Fast read-only overview of active models, live quota, and connected external subagents.
   - `/orca quota`: Outputs the real-time dual quota telemetry footer.

@@ -78,8 +78,8 @@
 ## 6. /orca Private Command Protocol
 To prevent command collisions and maintain disciplined UX, orchestration controls are strictly separated into value mutation vs. standalone actions:
 - **Settings & Value Mutation**:
-  - `/orca model`: Inspect and configure the main coordinator model and coworker/worker model tiers (`orca_models.html`).
-  - `/orca setting` (or `/orca settings`): Renders the interactive inline Settings UI widget (`orca_settings.html`), allowing visual adjustment of quota alert thresholds (5h/weekly), alert scope (`all` vs `low_only`), and model tiers.
+  - `/orca model`: Inspect and configure the main coordinator model and coworker/worker model tiers via `orca.py model`.
+  - `/orca setting` (or `/orca settings`): Fast terminal/console inspection and direct CLI adjustment of quota alert thresholds (5h/weekly), alert scope (`all` vs `low_only`), and model tiers via `orca.py setting`.
 - **Standalone Actions & Status (자주 사용하는 독립 명령어)**:
   - `/orca status`: Fast read-only inspection of active models, live quota, and connected external AI (Copilot, Codex, Claude, GitHub CLI).
   - `/orca quota`: Outputs the real-time dual quota telemetry footer.
