@@ -91,4 +91,15 @@ To prevent command collisions and maintain disciplined UX, orchestration control
 - **사전 구축 표준 템플릿 사용 (Pre-baked Standards)**: 모든 제어 및 설정 화면은 `.agents/ui/`에 사전에 완성된 표준 정적 템플릿(`orca_control_center.html`, `orca_settings.html`, `orca_models.html`)을 하드코딩된 상태로 유지합니다.
 - **자동 아티팩트 스테이징 (Automatic Staging)**: 사용자가 UI를 요청할 때는 `orca.py`의 `stage_ui_artifacts()`를 통해 활성 대화방 아티팩트 폴더로 복사하고, `<agent-embed src="file:///<artifact-path>">`로 서빙합니다.
 
+## 8. Multi-Agent Dispatch & External CLI Utilization Protocol (외부 CLI 협업 및 위임 활용)
+- **역할 특화 위임 (Specialized Delegation)**:
+  - **OpenAI Codex (`codex`)**: 복잡한 아키텍처나 버그 수정 후 서로 다른 모델(`gpt-6-luna`)을 통한 **2차 교차 검증(Cross-Verification)** 및 보안/에지 케이스 심층 검토에 활용합니다.
+  - **GitHub Copilot (`copilot`)**: 깃허브 네이티브 PR 생성, 이슈 분석, 깃 커밋 메시지 작성 및 AIC 크레딧 기반 경량 구현 오프로딩에 활용합니다.
+  - **Anthropic Claude Code (`claude`)**: 긴 콘텍스트 기반 대규모 문서화 및 파일 리팩토링에 활용합니다.
+- **실행 방법**:
+  - 터미널: `python .agents/scripts/orca.py dispatch --target <copilot|codex> --prompt "<작업지시>"`
+  - 대화창: `/orca dispatch <target> "<작업지시>"`
+  - 에이전트 자율 위임: 단일 모델의 편향을 방지하고 정확성을 극대화하기 위해, 중요한 코드 변경 전후로 `dispatch_subagent.py`를 통해 교차 검증을 능동적으로 호출합니다.
+
+
 

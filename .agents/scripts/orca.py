@@ -426,6 +426,43 @@ def cmd_model(args):
         print("  - 전체 모델 보기   : python .agents/scripts/orca.py model --list")
 
 
+def cmd_dispatch(args):
+    from coworker_bus import CoworkerEventBus
+    target = getattr(args, "target", "")
+    prompt = getattr(args, "prompt", "")
+    files = getattr(args, "files", None)
+    model = getattr(args, "model", None)
+    read_only = getattr(args, "read_only", False)
+    timeout = getattr(args, "timeout", 180)
+
+    print(f"🧭 [ORCA Event Bus] Dispatching task to '{target}'...")
+    res = CoworkerEventBus.dispatch(
+        target=target,
+        task=prompt,
+        files=files,
+        model=model,
+        read_only=read_only,
+        timeout=timeout,
+    )
+
+    if getattr(args, "json", False):
+        print(json.dumps(res, indent=2, ensure_ascii=False))
+        return
+
+    if res.get("success"):
+        print(f"\n✅ [{target.upper()} Output]:")
+        print(res.get("output", ""))
+        u = res.get("usage", {})
+        if u:
+            tot = u.get("totalTokens", 0)
+            cred = u.get("credits")
+            cred_str = f" ({cred} AIC)" if cred is not None else ""
+            print(f"\n📊 [Usage: {tot:,} tokens{cred_str}]")
+    else:
+        print(f"\n❌ [{target.upper()} Error]: {res.get('error')}", file=sys.stderr)
+        sys.exit(1)
+
+
 def cmd_sync(args):
     print("[ORCA] Syncing live Antigravity models...")
     sync_script = os.path.join(SCRIPT_DIR, "sync_models.py")
@@ -455,6 +492,7 @@ def cmd_help(args):
 
 [Terminal CLI Commands]
   python .agents/scripts/orca.py model [--main <model>] [--worker <tier>] [--ui] [--list]
+  python .agents/scripts/orca.py dispatch --target <copilot|codex> -p "<task>"
   python .agents/scripts/orca.py status
   python .agents/scripts/orca.py setting [--ag-5h <N>] [--ag-weekly <N>] [--ui]
   python .agents/scripts/orca.py sync
@@ -507,6 +545,17 @@ def main():
     # sync
     p_sync = subparsers.add_parser("sync", help="Sync models from agy CLI")
     p_sync.set_defaults(func=cmd_sync)
+
+    # dispatch
+    p_dispatch = subparsers.add_parser("dispatch", aliases=["delegate", "run"], help="Dispatch task to external coworker (copilot, codex)")
+    p_dispatch.add_argument("--target", "-t", required=True, help="Target coworker provider (copilot, codex)")
+    p_dispatch.add_argument("--prompt", "-p", required=True, help="Task prompt or instruction")
+    p_dispatch.add_argument("--files", "-f", help="Comma-separated context file paths")
+    p_dispatch.add_argument("--model", "-m", help="Target model override")
+    p_dispatch.add_argument("--read-only", action="store_true", help="Run in read-only mode")
+    p_dispatch.add_argument("--timeout", type=int, default=180, help="Timeout in seconds")
+    p_dispatch.add_argument("--json", action="store_true", help="Output JSON result")
+    p_dispatch.set_defaults(func=cmd_dispatch)
 
     # quota
     p_quota = subparsers.add_parser("quota", help="Print dual quota markdown meter")

@@ -128,6 +128,16 @@ class CopilotModule(CoworkerModuleSpec):
             "statusText": "연동 활성화",
         }
 
+    def dispatch(self, task: str, **kwargs) -> Any:
+        import copilot_worker
+        return copilot_worker.run_copilot_task(
+            task_prompt=task,
+            files=kwargs.get("files"),
+            model=kwargs.get("model"),
+            work_dir=kwargs.get("work_dir"),
+            timeout=kwargs.get("timeout", 180),
+        )
+
 
 class GitHubCliModule(CoworkerModuleSpec):
     name = "gh"
@@ -294,6 +304,17 @@ class CodexModule(CoworkerModuleSpec):
             "statusText": f"{status.get('model')} ({status.get('reasoningEffort')}) 가용 정상",
         }
 
+    def dispatch(self, task: str, **kwargs) -> Any:
+        import codex_worker
+        return codex_worker.run_codex_task(
+            task_prompt=task,
+            files=kwargs.get("files"),
+            model=kwargs.get("model"),
+            work_dir=kwargs.get("work_dir"),
+            read_only=kwargs.get("read_only", False),
+            timeout=kwargs.get("timeout", 180),
+        )
+
 
 class ClaudeCodeModule(CoworkerModuleSpec):
     name = "claude"
@@ -422,6 +443,25 @@ class CoworkerEventBus:
             except Exception:
                 pass
         return quotas
+
+    @classmethod
+    def dispatch(cls, target: str, task: str, **kwargs) -> Dict[str, Any]:
+        """
+        이벤트 버스를 통해 특정 코워커 모듈에 작업을 위임/실행합니다.
+        """
+        mod = cls.get_module(target)
+        if not mod:
+            return {
+                "success": False,
+                "error": f"코워커 모듈 '{target}'이 이벤트 버스에 등록되어 있지 않습니다. 가용 모듈: {[m.name for m in cls.list_modules()]}",
+                "provider": target,
+            }
+        try:
+            res = mod.dispatch(task, **kwargs)
+            res["provider"] = target
+            return res
+        except Exception as e:
+            return {"success": False, "error": str(e), "provider": target}
 
 
 # =====================================================================
