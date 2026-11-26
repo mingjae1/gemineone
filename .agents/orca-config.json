@@ -9,8 +9,8 @@
     "lowQuotaThresholdPercent": 70.0,
     "displayInSummary": true,
     "calibratedLimits": {
-      "fiveHourRemainingPercent": 100.0,
-      "weeklyRemainingPercent": 55.8
+      "fiveHourRemainingPercent": 87.9,
+      "weeklyRemainingPercent": 52.2
     },
     "thresholds": {
       "fiveHourLimitPercent": 25.0,
@@ -20,7 +20,7 @@
       "thresholdPercent": 70.0,
       "fiveHourThresholdPercent": 25.0,
       "weeklyThresholdPercent": 25.0,
-      "alertScope": "all",
+      "alertScope": "low_only",
       "showAgentBreakdown": false,
       "agents": {
         "antigravity_5h": {
