@@ -686,6 +686,9 @@ def make_bar(percent, total_blocks=15):
 
 
 def format_markdown_footer(telemetry):
+    if telemetry.get("alertScope") == "low_only" and not telemetry.get("alertTriggered", False):
+        return ""
+
     p_5h = telemetry["fiveHourRemainingPercent"]
     p_w = telemetry["weeklyRemainingPercent"]
 
