@@ -48,7 +48,7 @@ def stage_ui_artifacts(target_artifact_dir=None):
     if target_artifact_dir and os.path.exists(target_artifact_dir):
         import shutil
         staged = []
-        for fname in ["orca_settings.html", "orca_models.html"]:
+        for fname in ["orca_settings.html", "orca_models.html", "orca_control_center.html"]:
             src = os.path.join(UI_DIR, fname)
             dst = os.path.join(target_artifact_dir, fname)
             if os.path.exists(src):

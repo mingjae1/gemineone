@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ORCA Control Center</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    /* 스텝퍼 인풋 스핀 버튼 숨기기 (커스텀 위아래 버튼 사용) */
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    input[type=number] {
+      -moz-appearance: textfield;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: var(--card-border, rgba(120, 120, 120, 0.2));
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="bg-transparent text-[var(--foreground)] antialiased p-0 m-0 text-xs select-none">
+  <div class="py-2.5 px-3 rounded-lg border border-[var(--card-border)] bg-[var(--card)] space-y-3 max-w-xl shadow-sm mx-auto">
+    
+    <!-- 1. 고정 헤더 및 탭 네비게이션 -->
+    <div class="flex items-center justify-between border-b border-[var(--card-border)] pb-2">
+      <div class="flex items-center gap-2">
+        <span class="text-base" id="header-icon">🧭</span>
+        <div>
+          <div class="font-semibold text-sm text-[var(--foreground)] tracking-tight" id="header-title">
+            ORCA 컨트롤 센터
+          </div>
+          <div class="text-[10px] text-[var(--muted-foreground)]" id="header-subtitle">
+            오케스트레이션 환경설정 및 다중 에이전트 통합 제어
+          </div>
+        </div>
+      </div>
+      <div class="flex items-center gap-1.5 px-2 py-0.5 rounded bg-[var(--surface-variant,rgba(0,0,0,0.05))] text-[11px] font-mono text-[var(--muted-foreground)]">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+        v0.4.0
+      </div>
+    </div>
+
+    <!-- 2. 하드코딩 탭 바 -->
+    <div class="flex items-center gap-1 border-b border-[var(--card-border)] pb-1.5">
+      <button onclick="selectTab('settings')" id="tab-btn-settings" class="px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors bg-[var(--surface-variant,rgba(0,0,0,0.06))] text-[var(--foreground)] border border-[var(--primary)]">
+        ⚙️ 환경설정 허브
+      </button>
+      <button onclick="selectTab('models')" id="tab-btn-models" class="px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors text-[var(--muted-foreground)] hover:text-[var(--foreground)] border border-transparent">
+        🧭 모델 라우팅
+      </button>
+      <button onclick="selectTab('quota')" id="tab-btn-quota" class="px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors text-[var(--muted-foreground)] hover:text-[var(--foreground)] border border-transparent">
+        📊 실시간 쿼터
+      </button>
+      <button onclick="selectTab('external')" id="tab-btn-external" class="px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors text-[var(--muted-foreground)] hover:text-[var(--foreground)] border border-transparent">
+        🔗 외부 에이전트
+      </button>
+    </div>
+
+    <!-- 3. TAB 1: 환경설정 허브 (Settings Hub) -->
+    <div id="tab-content-settings" class="space-y-2.5">
+      
+      <!-- 카테고리 1: 쿼터 알림 임계치 설정 (스텝퍼) -->
+      <div class="rounded-md border border-[var(--card-border)] bg-[var(--surface-variant,rgba(0,0,0,0.015))] p-2 space-y-1.5">
+        <div class="flex items-center justify-between pb-1 border-b border-[var(--card-border)]/50">
+          <div class="flex items-center gap-1.5 font-semibold text-[11px] text-[var(--foreground)]">
+            <span class="text-xs">📊</span> 에이전트별 쿼터 알림 임계치 설정
+          </div>
+          <span class="text-[9px] text-[var(--muted-foreground)]">잔여량 임계치 도달 시 알림 발행</span>
+        </div>
+
+        <!-- Antigravity 5시간 한도 -->
+        <div class="grid grid-cols-12 items-center px-1.5 py-1 rounded bg-[var(--card)] border border-[var(--card-border)]">
+          <div class="col-span-6">
+            <div class="font-medium text-[11px] text-[var(--foreground)]">Antigravity 5시간 한도</div>
+            <div class="text-[9px] text-[var(--muted-foreground)]">슬라이딩 롤링 윈도우 기준</div>
+          </div>
+          <div class="col-span-6 flex items-center justify-end gap-1">
+            <div class="flex items-center rounded border border-[var(--card-border)] bg-[var(--surface-variant,rgba(0,0,0,0.03))] overflow-hidden">
+              <input type="number" id="in-ag-5h" min="1" max="99" step="1" value="25" 
+                     class="w-12 px-1 py-0.5 text-center font-mono font-semibold text-xs bg-transparent border-0 text-[var(--foreground)] focus:outline-none" />
+              <div class="flex flex-col border-l border-[var(--card-border)]">
+                <button type="button" onclick="stepVal('in-ag-5h', 1)" class="px-1.5 py-0 text-[8px] leading-tight text-[var(--muted-foreground)] hover:bg-[var(--card-border)] hover:text-[var(--foreground)]">▲</button>
+                <button type="button" onclick="stepVal('in-ag-5h', -1)" class="px-1.5 py-0 text-[8px] leading-tight text-[var(--muted-foreground)] hover:bg-[var(--card-border)] hover:text-[var(--foreground)] border-t border-[var(--card-border)]">▼</button>
+              </div>
+            </div>
+            <span class="text-[var(--muted-foreground)] text-[10px] w-4">%</span>
+          </div>
+        </div>
+
+        <!-- Antigravity 주간 한도 -->
+        <div class="grid grid-cols-12 items-center px-1.5 py-1 rounded bg-[var(--card)] border border-[var(--card-border)]">
+          <div class="col-span-6">
+            <div class="font-medium text-[11px] text-[var(--foreground)]">Antigravity 주간 한도</div>
+            <div class="text-[9px] text-[var(--muted-foreground)]">주간 1P 누적 쿼터 기준</div>
+          </div>
+          <div class="col-span-6 flex items-center justify-end gap-1">
+            <div class="flex items-center rounded border border-[var(--card-border)] bg-[var(--surface-variant,rgba(0,0,0,0.03))] overflow-hidden">
+              <input type="number" id="in-ag-weekly" min="1" max="99" step="1" value="25" 
+                     class="w-12 px-1 py-0.5 text-center font-mono font-semibold text-xs bg-transparent border-0 text-[var(--foreground)] focus:outline-none" />
+              <div class="flex flex-col border-l border-[var(--card-border)]">
+                <button type="button" onclick="stepVal('in-ag-weekly', 1)" class="px-1.5 py-0 text-[8px] leading-tight text-[var(--muted-foreground)] hover:bg-[var(--card-border)] hover:text-[var(--foreground)]">▲</button>
+                <button type="button" onclick="stepVal('in-ag-weekly', -1)" class="px-1.5 py-0 text-[8px] leading-tight text-[var(--muted-foreground)] hover:bg-[var(--card-border)] hover:text-[var(--foreground)] border-t border-[var(--card-border)]">▼</button>
+              </div>
+            </div>
+            <span class="text-[var(--muted-foreground)] text-[10px] w-4">%</span>
+          </div>
+        </div>
+
+        <!-- Antigravity 3P 모델 -->
+        <div class="grid grid-cols-12 items-center px-1.5 py-1 rounded bg-[var(--card)] border border-[var(--card-border)]">
+          <div class="col-span-6">
+            <div class="font-medium text-[11px] text-[var(--foreground)]">3P 모델 쿼터 (Claude/GPT)</div>
+            <div class="text-[9px] text-[var(--muted-foreground)]">안티그래비티 내부 주간 할당량</div>
+          </div>
+          <div class="col-span-6 flex items-center justify-end gap-1">
+            <div class="flex items-center rounded border border-[var(--card-border)] bg-[var(--surface-variant,rgba(0,0,0,0.03))] overflow-hidden">
+              <input type="number" id="in-claude" min="1" max="99" step="1" value="20" 
+                     class="w-12 px-1 py-0.5 text-center font-mono font-semibold text-xs bg-transparent border-0 text-[var(--foreground)] focus:outline-none" />
+              <div class="flex flex-col border-l border-[var(--card-border)]">
+                <button type="button" onclick="stepVal('in-claude', 1)" class="px-1.5 py-0 text-[8px] leading-tight text-[var(--muted-foreground)] hover:bg-[var(--card-border)] hover:text-[var(--foreground)]">▲</button>
+                <button type="button" onclick="stepVal('in-claude', -1)" class="px-1.5 py-0 text-[8px] leading-tight text-[var(--muted-foreground)] hover:bg-[var(--card-border)] hover:text-[var(--foreground)] border-t border-[var(--card-border)]">▼</button>
+              </div>
+            </div>
+            <span class="text-[var(--muted-foreground)] text-[10px] w-4">%</span>
+          </div>
+        </div>
+
+        <!-- GitHub Copilot -->
+        <div class="grid grid-cols-12 items-center px-1.5 py-1 rounded bg-[var(--card)] border border-[var(--card-border)]">
+          <div class="col-span-6">
+            <div class="font-medium text-[11px] text-[var(--foreground)]">GitHub Copilot 세션 한도</div>
+            <div class="text-[9px] text-[var(--muted-foreground)]">CLI 1회 실행 허용 크레딧</div>
+          </div>
+          <div class="col-span-6 flex items-center justify-end gap-1">
+            <div class="flex items-center rounded border border-[var(--card-border)] bg-[var(--surface-variant,rgba(0,0,0,0.03))] overflow-hidden">
+              <input type="number" id="in-copilot" min="0" max="100" step="1" value="1" 
+                     class="w-12 px-1 py-0.5 text-center font-mono font-semibold text-xs bg-transparent border-0 text-[var(--foreground)] focus:outline-none" />
+              <div class="flex flex-col border-l border-[var(--card-border)]">
+                <button type="button" onclick="stepVal('in-copilot', 1)" class="px-1.5 py-0 text-[8px] leading-tight text-[var(--muted-foreground)] hover:bg-[var(--card-border)] hover:text-[var(--foreground)]">▲</button>
+                <button type="button" onclick="stepVal('in-copilot', -1)" class="px-1.5 py-0 text-[8px] leading-tight text-[var(--muted-foreground)] hover:bg-[var(--card-border)] hover:text-[var(--foreground)] border-t border-[var(--card-border)]">▼</button>
+              </div>
+            </div>
+            <span class="text-[var(--muted-foreground)] text-[9px] w-4">AIC</span>
+          </div>
+        </div>
+
+        <!-- OpenAI Codex -->
+        <div class="grid grid-cols-12 items-center px-1.5 py-1 rounded bg-[var(--card)] border border-[var(--card-border)]">
+          <div class="col-span-6">
+            <div class="font-medium text-[11px] text-[var(--foreground)]">OpenAI Codex 세션 임계치</div>
+            <div class="text-[9px] text-[var(--muted-foreground)]">ChatGPT 연동 세션 잔여 기준</div>
+          </div>
+          <div class="col-span-6 flex items-center justify-end gap-1">
+            <div class="flex items-center rounded border border-[var(--card-border)] bg-[var(--surface-variant,rgba(0,0,0,0.03))] overflow-hidden">
+              <input type="number" id="in-codex" min="1" max="99" step="1" value="20" 
+                     class="w-12 px-1 py-0.5 text-center font-mono font-semibold text-xs bg-transparent border-0 text-[var(--foreground)] focus:outline-none" />
+              <div class="flex flex-col border-l border-[var(--card-border)]">
+                <button type="button" onclick="stepVal('in-codex', 1)" class="px-1.5 py-0 text-[8px] leading-tight text-[var(--muted-foreground)] hover:bg-[var(--card-border)] hover:text-[var(--foreground)]">▲</button>
+                <button type="button" onclick="stepVal('in-codex', -1)" class="px-1.5 py-0 text-[8px] leading-tight text-[var(--muted-foreground)] hover:bg-[var(--card-border)] hover:text-[var(--foreground)] border-t border-[var(--card-border)]">▼</button>
+              </div>
+            </div>
+            <span class="text-[var(--muted-foreground)] text-[10px] w-4">%</span>
+          </div>
+        </div>
+
+        <!-- 알림 범위 설정 -->
+        <div class="pt-1.5 border-t border-[var(--card-border)]/50 flex items-center justify-between text-[11px]">
+          <span class="font-medium text-[var(--foreground)]">🎯 알림 표시 범위 (`alertScope`)</span>
+          <div class="flex items-center gap-2">
+            <label class="flex items-center gap-1 px-2 py-0.5 rounded border border-[var(--primary)] bg-[var(--surface-variant,rgba(0,0,0,0.04))] cursor-pointer">
+              <input type="radio" name="scope" value="all" checked class="accent-[var(--primary)]" />
+              <span class="font-medium text-[var(--foreground)] text-[10px]">전체 에이전트</span>
+            </label>
+            <label class="flex items-center gap-1 px-2 py-0.5 rounded border border-[var(--card-border)] hover:border-[var(--primary)] cursor-pointer">
+              <input type="radio" name="scope" value="low_only" class="accent-[var(--primary)]" />
+              <span class="font-medium text-[var(--foreground)] text-[10px]">경량 작업 전용</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- 카테고리 2: 오케스트레이션 정책 및 가드레일 -->
+      <div class="rounded-md border border-[var(--card-border)] bg-[var(--surface-variant,rgba(0,0,0,0.015))] p-2 space-y-1.5">
+        <div class="flex items-center justify-between pb-1 border-b border-[var(--card-border)]/50">
+          <div class="flex items-center gap-1.5 font-semibold text-[11px] text-[var(--foreground)]">
+            <span class="text-xs">🛡️</span> 오케스트레이션 정책 및 보호 가드레일
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between px-1 py-0.5">
+          <div>
+            <div class="font-medium text-[11px] text-[var(--foreground)]">코디네이터 직접 파일 수정 차단</div>
+            <div class="text-[9px] text-[var(--muted-foreground)]">코드 수정은 반드시 Swarm 코워커에게 위임 강제</div>
+          </div>
+          <input type="checkbox" id="chk-enforce" checked class="w-4 h-4 accent-[var(--primary)] rounded cursor-pointer" onchange="updateCommand()" />
+        </div>
+
+        <div class="flex items-center justify-between px-1 py-0.5">
+          <div>
+            <div class="font-medium text-[11px] text-[var(--foreground)]">키워드 기반 적응형 추론 노력치 라우팅</div>
+            <div class="text-[9px] text-[var(--muted-foreground)]">작업 지시어에 따라 최적 모델(Low~XHigh, Carbon) 자동 배정</div>
+          </div>
+          <input type="checkbox" id="chk-adaptive" checked class="w-4 h-4 accent-[var(--primary)] rounded cursor-pointer" onchange="updateCommand()" />
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 4. TAB 2: 모델 및 코워커 구성 (Models & Coworkers) -->
+    <div id="tab-content-models" class="hidden space-y-2.5">
+      
+      <!-- 메인 대화 모델 -->
+      <div class="rounded-md border border-[var(--card-border)] bg-[var(--surface-variant,rgba(0,0,0,0.015))] p-2 space-y-1.5">
+        <div class="flex items-center justify-between pb-1 border-b border-[var(--card-border)]/50">
+          <div class="flex items-center gap-1.5 font-semibold text-[11px] text-[var(--foreground)]">
+            <span class="text-xs">🗣️</span> 메인 대화 모델 (Coordinator)
+          </div>
+          <span class="text-[9px] text-[var(--muted-foreground)]">사용자와 직접 대화 및 작업 분배</span>
+        </div>
+        <select id="sel-main-model" class="w-full px-2 py-1 rounded border border-[var(--card-border)] bg-[var(--card)] text-[var(--foreground)] text-[11px] font-medium focus:outline-none focus:border-[var(--primary)]" onchange="updateCommand()">
+          <option value="gemini-3.8-flash-high" selected>Gemini 3.8 Flash High (권장: 초고속 1D Fast Intake)</option>
+          <option value="gemini-4-neon-high">Gemini 4 Neon High (고성능 균형 추론)</option>
+          <option value="gemini-4-hydrogen-high">Gemini 4 Hydrogen High (심층 분석 및 복합 컨텍스트)</option>
+          <option value="gemini-4-carbon-high">Gemini 4 Carbon High (최고사양 아키텍처 및 동시성)</option>
+        </select>
+      </div>
+
+      <!-- 기본 코워커 모델 티어 -->
+      <div class="rounded-md border border-[var(--card-border)] bg-[var(--surface-variant,rgba(0,0,0,0.015))] p-2 space-y-1.5">
+        <div class="flex items-center justify-between pb-1 border-b border-[var(--card-border)]/50">
+          <div class="flex items-center gap-1.5 font-semibold text-[11px] text-[var(--foreground)]">
+            <span class="text-xs">🤝</span> 기본 코워커 모델 (Default Worker)
+          </div>
+          <span class="text-[9px] text-[var(--muted-foreground)]">별도 지정 없을 때 기본 실행되는 작업자</span>
+        </div>
+        <select id="sel-worker-tier" class="w-full px-2 py-1 rounded border border-[var(--card-border)] bg-[var(--card)] text-[var(--foreground)] text-[11px] font-medium focus:outline-none focus:border-[var(--primary)]" onchange="updateCommand()">
+          <option value="hydrogen-high" selected>Gemini 4 Hydrogen High (표준 구현 권장)</option>
+          <option value="neon-high">Gemini 4 Neon High (고성능 균형 작업)</option>
+          <option value="neon-low">Gemini 4 Neon Low (경량 절약 작업)</option>
+          <option value="carbon-high">Gemini 4 Carbon High (동시성/대규모 아키텍처)</option>
+          <option value="argon-high">Gemini 4 Argon High (고정밀 다단계 추론)</option>
+          <option value="flash-high">Gemini 3.8 Flash High (초고속 보일러플레이트/문서)</option>
+        </select>
+      </div>
+
+      <!-- 작업 유형별 적응형 라우팅 규칙 -->
+      <div class="rounded-md border border-[var(--card-border)] bg-[var(--surface-variant,rgba(0,0,0,0.015))] p-2 space-y-1">
+        <div class="font-semibold text-[11px] text-[var(--foreground)] pb-1 border-b border-[var(--card-border)]/50">
+          📋 작업 유형별 적응형 라우팅 현황
+        </div>
+        <div class="space-y-1 pt-1 text-[10px]">
+          <div class="flex items-center justify-between px-1 py-0.5 rounded bg-[var(--card)] border border-[var(--card-border)]">
+            <span class="text-[var(--foreground)]">심층 아키텍처 및 동시성/분산</span>
+            <span class="font-mono text-purple-600 dark:text-purple-400 font-semibold">gemini-4-carbon-high</span>
+          </div>
+          <div class="flex items-center justify-between px-1 py-0.5 rounded bg-[var(--card)] border border-[var(--card-border)]">
+            <span class="text-[var(--foreground)]">복합 디버깅 및 대규모 테스트</span>
+            <span class="font-mono text-blue-600 dark:text-blue-400 font-semibold">gemini-4-hydrogen-xhigh</span>
+          </div>
+          <div class="flex items-center justify-between px-1 py-0.5 rounded bg-[var(--card)] border border-[var(--card-border)]">
+            <span class="text-[var(--foreground)]">일반 기능 개발 및 컴포넌트 구현</span>
+            <span class="font-mono text-emerald-600 dark:text-emerald-400 font-semibold">gemini-4-hydrogen-high</span>
+          </div>
+          <div class="flex items-center justify-between px-1 py-0.5 rounded bg-[var(--card)] border border-[var(--card-border)]">
+            <span class="text-[var(--foreground)]">경량 스크립트 및 단순 수정</span>
+            <span class="font-mono text-amber-600 dark:text-amber-400 font-semibold">gemini-4-hydrogen-low</span>
+          </div>
+          <div class="flex items-center justify-between px-1 py-0.5 rounded bg-[var(--card)] border border-[var(--card-border)]">
+            <span class="text-[var(--foreground)]">단순 설정·문서·포맷팅</span>
+            <span class="font-mono text-cyan-600 dark:text-cyan-400 font-semibold">gemini-3.8-flash-high</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 5. TAB 3: 실시간 쿼터 (Live Quota & Telemetry) -->
+    <div id="tab-content-quota" class="hidden space-y-2.5">
+      <div class="rounded-md border border-[var(--card-border)] bg-[var(--surface-variant,rgba(0,0,0,0.015))] p-2 space-y-2">
+        <div class="flex items-center justify-between pb-1 border-b border-[var(--card-border)]/50">
+          <div class="font-semibold text-[11px] text-[var(--foreground)]">🔵 Google Antigravity 실시간 쿼터 현황</div>
+          <span class="text-[9px] text-emerald-600 dark:text-emerald-400 font-medium font-mono">정상 작동 중</span>
+        </div>
+
+        <!-- 5시간 게이지 -->
+        <div class="space-y-1">
+          <div class="flex items-center justify-between text-[10px]">
+            <span class="text-[var(--foreground)] font-medium">5시간 슬라이딩 한도 (1P)</span>
+            <span class="font-mono font-semibold text-emerald-600 dark:text-emerald-400" id="gauge-val-5h">79.0% 잔여</span>
+          </div>
+          <div class="w-full h-2 rounded-full bg-[var(--card-border)] overflow-hidden">
+            <div id="gauge-bar-5h" class="h-full bg-emerald-500 rounded-full transition-all duration-500" style="width: 79%;"></div>
+          </div>
+          <div class="text-[9px] text-[var(--muted-foreground)] flex justify-between">
+            <span>최소 임계치: 10%</span>
+            <span>리셋 예정: 슬라이딩 롤링</span>
+          </div>
+        </div>
+
+        <!-- 주간 게이지 -->
+        <div class="space-y-1 pt-1">
+          <div class="flex items-center justify-between text-[10px]">
+            <span class="text-[var(--foreground)] font-medium">주간 누적 한도 (1P)</span>
+            <span class="font-mono font-semibold text-emerald-600 dark:text-emerald-400" id="gauge-val-weekly">82.4% 잔여</span>
+          </div>
+          <div class="w-full h-2 rounded-full bg-[var(--card-border)] overflow-hidden">
+            <div id="gauge-bar-weekly" class="h-full bg-emerald-500 rounded-full transition-all duration-500" style="width: 82.4%;"></div>
+          </div>
+          <div class="text-[9px] text-[var(--muted-foreground)] flex justify-between">
+            <span>최소 임계치: 25%</span>
+            <span>리셋 예정: 주간 갱신</span>
+          </div>
+        </div>
+
+        <!-- 3P 주간 쿼터 -->
+        <div class="space-y-1 pt-1">
+          <div class="flex items-center justify-between text-[10px]">
+            <span class="text-[var(--foreground)] font-medium">3P 주간 쿼터 (Claude / GPT)</span>
+            <span class="font-mono font-semibold text-blue-600 dark:text-blue-400">53.9% 잔여</span>
+          </div>
+          <div class="w-full h-2 rounded-full bg-[var(--card-border)] overflow-hidden">
+            <div class="h-full bg-blue-500 rounded-full transition-all duration-500" style="width: 53.9%;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. TAB 4: 외부 에이전트 (External Agents) -->
+    <div id="tab-content-external" class="hidden space-y-2">
+      <!-- Copilot -->
+      <div class="p-2 rounded bg-[var(--card)] border border-[var(--card-border)] flex items-center justify-between">
+        <div>
+          <div class="font-semibold text-[11px] text-[var(--foreground)]">🐙 GitHub Copilot (gh copilot / copilot CLI)</div>
+          <div class="text-[9px] text-[var(--muted-foreground)]">AI Credits (AIC) 세션 및 주간 쿼터 제어</div>
+        </div>
+        <span class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium text-[10px]">연동 활성화</span>
+      </div>
+
+      <!-- Codex -->
+      <div class="p-2 rounded bg-[var(--card)] border border-[var(--card-border)] flex items-center justify-between">
+        <div>
+          <div class="font-semibold text-[11px] text-[var(--foreground)]">🤖 OpenAI Codex</div>
+          <div class="text-[9px] text-[var(--muted-foreground)]">ChatGPT 계정 연동 및 추론 수준 (gpt-6-luna) 관리</div>
+        </div>
+        <span class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium text-[10px]">정상 연동</span>
+      </div>
+
+      <!-- Claude Code -->
+      <div class="p-2 rounded bg-[var(--card)] border border-[var(--card-border)] flex items-center justify-between">
+        <div>
+          <div class="font-semibold text-[11px] text-[var(--foreground)]">🔮 Anthropic Claude Code (독립 CLI)</div>
+          <div class="text-[9px] text-[var(--muted-foreground)]">바이너리 v2.1.332 설치됨 · 일별 로컬 활동 로깅 추적</div>
+        </div>
+        <span class="px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 font-medium text-[10px]">인증 대기</span>
+      </div>
+
+      <!-- GitHub CLI -->
+      <div class="p-2 rounded bg-[var(--card)] border border-[var(--card-border)] flex items-center justify-between">
+        <div>
+          <div class="font-semibold text-[11px] text-[var(--foreground)]">🐙 GitHub CLI (gh)</div>
+          <div class="text-[9px] text-[var(--muted-foreground)]">PR/이슈 관리용 REST API: 5,000 req/hr 할당량 모니터링</div>
+        </div>
+        <span class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium text-[10px]">정상 연동</span>
+      </div>
+    </div>
+
+    <!-- 7. 하단 명령어 미리보기 및 액션 버튼 -->
+    <div class="border-t border-[var(--card-border)] pt-2 flex items-center justify-between text-[11px]">
+      <div id="cmd-preview" class="font-mono text-[9px] text-[var(--muted-foreground)] truncate max-w-sm">
+        python .agents/scripts/orca.py setting
+      </div>
+      <button id="btn-apply" class="px-2.5 py-1 rounded bg-[var(--primary)] text-[var(--primary-foreground)] text-[10px] font-medium hover:opacity-90 transition-opacity flex-shrink-0">
+        설정 복사
+      </button>
+    </div>
+
+  </div>
+
+  <script>
+    let activeTab = 'settings';
+
+    const tabs = {
+      settings: document.getElementById('tab-content-settings'),
+      models: document.getElementById('tab-content-models'),
+      quota: document.getElementById('tab-content-quota'),
+      external: document.getElementById('tab-content-external'),
+    };
+
+    const tabBtns = {
+      settings: document.getElementById('tab-btn-settings'),
+      models: document.getElementById('tab-btn-models'),
+      quota: document.getElementById('tab-btn-quota'),
+      external: document.getElementById('tab-btn-external'),
+    };
+
+    const headerIcon = document.getElementById('header-icon');
+    const headerTitle = document.getElementById('header-title');
+    const headerSubtitle = document.getElementById('header-subtitle');
+    const cmdPreview = document.getElementById('cmd-preview');
+    const btnApply = document.getElementById('btn-apply');
+
+    const meta = {
+      settings: { icon: '⚙️', title: 'ORCA 환경설정 허브', sub: '에이전트별 쿼터 알림 임계치 및 정책 제어' },
+      models: { icon: '🧭', title: 'ORCA 모델 및 코워커', sub: '메인 대화(Coordinator) 및 작업자 라우팅' },
+      quota: { icon: '📊', title: '실시간 쿼터 모니터', sub: 'Antigravity 5시간 및 주간 쿼터 현황' },
+      external: { icon: '🔗', title: '외부 에이전트 연동', sub: 'Copilot, Codex, Claude Code 상태' },
+    };
+
+    function selectTab(tabKey) {
+      activeTab = tabKey;
+      Object.keys(tabs).forEach(k => {
+        if (k === tabKey) {
+          tabs[k].classList.remove('hidden');
+          tabBtns[k].classList.add('bg-[var(--surface-variant,rgba(0,0,0,0.06))]', 'text-[var(--foreground)]', 'border-[var(--primary)]');
+          tabBtns[k].classList.remove('text-[var(--muted-foreground)]', 'border-transparent');
+        } else {
+          tabs[k].classList.add('hidden');
+          tabBtns[k].classList.remove('bg-[var(--surface-variant,rgba(0,0,0,0.06))]', 'text-[var(--foreground)]', 'border-[var(--primary)]');
+          tabBtns[k].classList.add('text-[var(--muted-foreground)]', 'border-transparent');
+        }
+      });
+
+      const m = meta[tabKey] || meta.settings;
+      headerIcon.textContent = m.icon;
+      headerTitle.textContent = m.title;
+      headerSubtitle.textContent = m.sub;
+      updateCommand();
+    }
+
+    function stepVal(id, delta) {
+      const el = document.getElementById(id);
+      let v = parseInt(el.value, 10) || 0;
+      const min = parseInt(el.min, 10) || 0;
+      const max = parseInt(el.max, 10) || 100;
+      v = Math.min(max, Math.max(min, v + delta));
+      el.value = v;
+      updateCommand();
+    }
+
+    function updateCommand() {
+      if (activeTab === 'settings') {
+        const v5h = document.getElementById('in-ag-5h').value || '25';
+        const vw = document.getElementById('in-ag-weekly').value || '25';
+        const vc = document.getElementById('in-claude').value || '20';
+        const vcp = document.getElementById('in-copilot').value || '1';
+        const vcdx = document.getElementById('in-codex').value || '20';
+        let scope = 'all';
+        document.querySelectorAll('input[name="scope"]').forEach(r => { if (r.checked) scope = r.value; });
+        cmdPreview.textContent = `python .agents/scripts/orca.py setting --ag-5h ${v5h} --ag-weekly ${vw} --claude ${vc} --copilot ${vcp} --codex ${vcdx} --scope ${scope}`;
+      } else if (activeTab === 'models') {
+        const mMain = document.getElementById('sel-main-model').value;
+        const mWorker = document.getElementById('sel-worker-tier').value;
+        cmdPreview.textContent = `python .agents/scripts/orca.py model --main ${mMain} --worker ${mWorker}`;
+      } else if (activeTab === 'quota') {
+        cmdPreview.textContent = 'python .agents/scripts/orca.py quota';
+      } else if (activeTab === 'external') {
+        cmdPreview.textContent = 'python .agents/scripts/orca.py status';
+      }
+    }
+
+    // Input change listeners
+    ['in-ag-5h', 'in-ag-weekly', 'in-claude', 'in-copilot', 'in-codex'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('input', updateCommand);
+        el.addEventListener('change', updateCommand);
+      }
+    });
+
+    document.querySelectorAll('input[name="scope"]').forEach(r => r.addEventListener('change', updateCommand));
+
+    btnApply.addEventListener('click', () => {
+      navigator.clipboard.writeText(cmdPreview.textContent).then(() => {
+        const orig = btnApply.textContent;
+        btnApply.textContent = '복사 완료! ✓';
+        setTimeout(() => { btnApply.textContent = orig; }, 1500);
+      });
+    });
+
+    selectTab('settings');
+  </script>
+</body>
+</html>

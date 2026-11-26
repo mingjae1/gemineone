@@ -86,3 +86,9 @@ To prevent command collisions and maintain disciplined UX, orchestration control
   - `/orca sync`: Probes and synchronizes available Gemini models and account capabilities via `sync_models.py`.
   - `/orca help`: Displays the command index and usage cheat sheet.
 
+## 7. Pre-baked Hardcoded UI Protocol (UI 하드코딩 및 정적 서빙 원칙)
+- **동적 UI 생성 금지 (No Ad-hoc UI Generation)**: 에이전트는 대화 중 임의로 UI HTML/JS 코드를 새로 생성하거나 재작성하지 않습니다. 에이전트의 즉석 코드 생성은 레이아웃 변형, 스텝퍼/버튼 누락, 한글 인코딩 오류를 유발합니다.
+- **사전 구축 표준 템플릿 사용 (Pre-baked Standards)**: 모든 제어 및 설정 화면은 `.agents/ui/`에 사전에 완성된 표준 정적 템플릿(`orca_control_center.html`, `orca_settings.html`, `orca_models.html`)을 하드코딩된 상태로 유지합니다.
+- **자동 아티팩트 스테이징 (Automatic Staging)**: 사용자가 UI를 요청할 때는 `orca.py`의 `stage_ui_artifacts()`를 통해 활성 대화방 아티팩트 폴더로 복사하고, `<agent-embed src="file:///<artifact-path>">`로 서빙합니다.
+
+
