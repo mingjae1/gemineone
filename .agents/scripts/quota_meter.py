@@ -257,192 +257,16 @@ def get_agent_breakdown(conv_id, brain_dir=None, db_path=None):
 
 
 def get_external_providers():
-    providers = {}
-    import shutil
-    import subprocess
-
-    user_home = os.environ.get("USERPROFILE", os.path.expanduser("~"))
-    local_app_data = os.environ.get("LOCALAPPDATA", os.path.join(user_home, "AppData", "Local"))
-    program_files = os.environ.get("ProgramFiles", r"C:\Program Files")
-
-    def resolve_cli(name, candidates):
-        b = shutil.which(name) or shutil.which(f"{name}.cmd") or shutil.which(f"{name}.exe")
-        if b:
-            return b
-        for c in candidates:
-            if os.path.exists(c):
-                return c
-        return None
-
-    # 1. Claude Code CLI
-    claude_bin = resolve_cli("claude", [
-        os.path.join(user_home, ".local", "bin", "claude.exe"),
-        os.path.join(local_app_data, "Programs", "claude", "claude.exe"),
-    ])
-    claude_stats = os.path.join(user_home, ".claude", "stats-cache.json")
-    claude_total_msg = 0
-    claude_total_tools = 0
-    claude_days = 0
-    if os.path.exists(claude_stats):
-        try:
-            with open(claude_stats, "r", encoding="utf-8") as f:
-                cs = json.load(f)
-                daily = cs.get("dailyActivity", [])
-                claude_total_msg = sum(d.get("messageCount", 0) for d in daily)
-                claude_total_tools = sum(d.get("toolCallCount", 0) for d in daily)
-                claude_days = len(daily)
-        except Exception:
-            pass
-
-    if claude_bin:
-        providers["claude"] = {
-            "installed": True,
-            "loggedIn": False,
-            "version": "2.1.332",
-            "totalMessages": claude_total_msg,
-            "totalToolCalls": claude_total_tools,
-            "daysTracked": claude_days,
-            "status": "설치됨 (로그인 대기: claude auth login)",
-        }
-    else:
-        providers["claude"] = {"installed": False}
-
-    # 2. OpenAI Codex CLI
-    codex_bin = resolve_cli("codex", [
-        os.path.join(local_app_data, "Programs", "OpenAI", "Codex", "bin", "codex.exe"),
-        os.path.join(user_home, ".codex", "codex.exe"),
-    ])
-    codex_auth = os.path.join(user_home, ".codex", "auth.json")
-    codex_cfg = os.path.join(user_home, ".codex", "config.toml")
-    codex_info = {
-        "installed": bool(codex_bin),
-        "loggedIn": False,
-        "authMode": None,
-        "email": None,
-        "plan": None,
-        "model": "gpt-6-luna",
-        "reasoningEffort": "medium",
-    }
-    if os.path.exists(codex_auth):
-        try:
-            import base64
-            with open(codex_auth, "r", encoding="utf-8") as f:
-                d = json.load(f)
-                codex_info["authMode"] = d.get("auth_mode")
-                codex_info["loggedIn"] = bool(d.get("auth_mode"))
-                token = d.get("tokens", {}).get("id_token", "")
-                if token and "." in token:
-                    parts = token.split(".")
-                    if len(parts) >= 2:
-                        padding = 4 - (len(parts[1]) % 4)
-                        payload = json.loads(base64.urlsafe_b64decode(parts[1] + "=" * (padding % 4)).decode("utf-8"))
-                        codex_info["email"] = payload.get("email")
-                        auth_meta = payload.get("https://api.openai.com/auth", {})
-                        codex_info["plan"] = auth_meta.get("chatgpt_plan_type", "free")
-                        codex_info["subscriptionUntil"] = auth_meta.get("chatgpt_subscription_active_until")
-        except Exception:
-            pass
-
-    if os.path.exists(codex_cfg):
-        try:
-            with open(codex_cfg, "r", encoding="utf-8") as f:
-                for line in f:
-                    if line.strip().startswith("model ="):
-                        codex_info["model"] = line.split("=")[1].strip().strip('"').strip("'")
-                    elif line.strip().startswith("model_reasoning_effort ="):
-                        codex_info["reasoningEffort"] = line.split("=")[1].strip().strip('"').strip("'")
-        except Exception:
-            pass
-    providers["codex"] = codex_info
-
-    # 3. GitHub Copilot CLI
-    copilot_bin = resolve_cli("copilot", [
-        os.path.join(local_app_data, "GitHubCopilotCLI", "copilot.exe"),
-        os.path.join(user_home, ".copilot", "copilot.exe"),
-    ])
-    if copilot_bin:
-        copilot_dir = os.path.join(user_home, ".copilot")
-        cfg_path = os.path.join(copilot_dir, "config.json")
-        db_path = os.path.join(copilot_dir, "session-store.db")
-        cp_user = None
-        if os.path.exists(cfg_path):
-            try:
-                with open(cfg_path, "r", encoding="utf-8") as f:
-                    content = "".join(l for l in f if not l.strip().startswith("//"))
-                    d = json.loads(content)
-                    cp_user = d.get("lastLoggedInUser", {}).get("login")
-            except Exception:
-                pass
-
-        cp_tokens = 0
-        cp_credits = 0.0
-        if os.path.exists(db_path):
-            try:
-                import sqlite3
-                conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
-                cur = conn.cursor()
-                cur.execute("SELECT SUM(input_tokens + output_tokens), SUM(total_nano_aiu) FROM assistant_usage_events;")
-                row = cur.fetchone()
-                conn.close()
-                if row and row[0]:
-                    cp_tokens = int(row[0])
-                    cp_credits = round((row[1] or 0) / 1e9, 3)
-            except Exception:
-                pass
-
-        providers["copilot"] = {
-            "installed": True,
-            "loggedIn": bool(cp_user),
-            "user": cp_user or "unknown",
-            "tokens": cp_tokens,
-            "credits": cp_credits,
-            "version": "1.0.115",
-        }
-    else:
-        providers["copilot"] = {"installed": False}
-
-    # 4. GitHub CLI (gh)
-    gh_bin = resolve_cli("gh", [
-        os.path.join(program_files, "GitHub CLI", "gh.exe"),
-        os.path.join(local_app_data, "Microsoft", "WinGet", "Links", "gh.exe"),
-    ])
-    gh_logged_in = False
-    gh_user = None
-    gh_rate_info = {}
-    if gh_bin:
-        try:
-            r = subprocess.run([gh_bin, "auth", "status"], capture_output=True, text=True, timeout=2)
-            out = (r.stdout + r.stderr)
-            if "Logged in to" in out or "✓" in out:
-                gh_logged_in = True
-                import re
-                m = re.search(r"account\s+([A-Za-z0-9_-]+)", out)
-                if m:
-                    gh_user = m.group(1)
-        except Exception:
-            pass
-
-        try:
-            r_rate = subprocess.run([gh_bin, "api", "rate_limit"], capture_output=True, text=True, timeout=2)
-            if r_rate.returncode == 0:
-                res = json.loads(r_rate.stdout).get("resources", {})
-                gh_rate_info = {
-                    "coreRemaining": res.get("core", {}).get("remaining"),
-                    "coreLimit": res.get("core", {}).get("limit"),
-                    "copilotRemaining": res.get("copilot_usage_records", {}).get("remaining"),
-                    "graphqlRemaining": res.get("graphql", {}).get("remaining"),
-                }
-        except Exception:
-            pass
-
-    providers["gh"] = {
-        "installed": bool(gh_bin),
-        "loggedIn": gh_logged_in,
-        "user": gh_user,
-        "rateLimit": gh_rate_info,
-    }
-
-    return providers
+    """
+    ORCA CoworkerEventBus 메인 버스를 통해 등록된 모든 코워커 모듈의 상태를 수집합니다.
+    (모듈 규격에 따라 쉽게 붙이고 뗄 수 있는 플러그형 이벤트 버스 아키텍처)
+    """
+    try:
+        from coworker_bus import CoworkerEventBus
+        return CoworkerEventBus.probe_all()
+    except Exception:
+        pass
+    return {}
 
 
 def compute_5h_rolling_tokens(brain_dir=None, now_utc=None):
@@ -649,6 +473,12 @@ def get_dual_quota_telemetry(conv_id=None, brain_dir=None, now_utc=None, five_h_
         "agentBreakdown": get_agent_breakdown(conv_id, brain_dir),
         "externalProviders": get_external_providers(),
     }
+
+    try:
+        from coworker_bus import CoworkerEventBus
+        res["activeQuotas"] = CoworkerEventBus.get_active_quotas()
+    except Exception:
+        res["activeQuotas"] = {}
 
     if live_quota:
         res["reset5h"] = live_quota.get("reset5h")

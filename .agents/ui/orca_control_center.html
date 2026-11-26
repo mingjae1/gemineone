@@ -441,130 +441,138 @@
       agHtml += `</div>`;
       container.insertAdjacentHTML('beforeend', agHtml);
 
-      // 2. GitHub Copilot & GitHub CLI (실제 연동된 경우에만 적응형 표시)
-      const cp = ext.copilot || {};
-      const gh = ext.gh || {};
-      const isCpConnected = cp.installed && cp.loggedIn;
-      const isGhConnected = gh.installed && gh.loggedIn;
+      // 2. 이벤트 버스(CoworkerEventBus) 표준 규격 모듈 동적 적응형 렌더링
+      const activeQuotas = data.activeQuotas || {};
+      const activeKeys = Object.keys(activeQuotas);
 
-      if (isCpConnected || isGhConnected) {
-        const ghRate = gh.rateLimit || {};
-        const coreRem = ghRate.coreRemaining !== undefined ? ghRate.coreRemaining : 4980;
-        const coreLim = ghRate.coreLimit || 5000;
-        const corePct = Math.min(100, (coreRem / coreLim) * 100);
-        const cpRem = ghRate.copilotRemaining !== undefined ? ghRate.copilotRemaining : 1750;
-        const cpPct = Math.min(100, (cpRem / 2000) * 100);
-        const userStr = cp.user || gh.user || '정상 연동';
+      if (activeKeys.length > 0) {
+        // 이벤트 버스에 등록된 활성 코워커 모듈 순회
+        activeKeys.forEach(k => {
+          const q = activeQuotas[k];
+          const remPct = (q.remainingPercent !== undefined) ? q.remainingPercent : 100.0;
+          const remStr = (q.remaining !== undefined && q.limit !== undefined) 
+            ? `${remPct.toFixed(1)}% 잔여 (${q.remaining.toLocaleString()} / ${q.limit.toLocaleString()})`
+            : `${remPct.toFixed(1)}% 잔여`;
 
-        let ghHtml = `
-          <div class="rounded-md border border-[var(--card-border)] bg-[var(--surface-variant,rgba(0,0,0,0.015))] p-2 space-y-2">
-            <div class="flex items-center justify-between pb-1 border-b border-[var(--card-border)]/50">
-              <div class="flex items-center gap-1.5 font-semibold text-[11px] text-[var(--foreground)]">
-                <span class="text-xs">🐙</span> GitHub Copilot & GitHub CLI
-              </div>
-              <span class="text-[9px] text-emerald-600 dark:text-emerald-400 font-medium font-mono">${userStr} · 연동 활성화</span>
-            </div>
+          let colorClass = 'bg-emerald-500';
+          let textClass = 'text-emerald-600 dark:text-emerald-400';
+          if (remPct <= 20) {
+            colorClass = 'bg-red-500';
+            textClass = 'text-red-500';
+          } else if (remPct <= 50) {
+            colorClass = 'bg-amber-500';
+            textClass = 'text-amber-500';
+          } else if (k === 'copilot') {
+            colorClass = 'bg-purple-500';
+            textClass = 'text-purple-600 dark:text-purple-400';
+          }
 
-            <div class="space-y-1">
-              <div class="flex items-center justify-between text-[10px]">
-                <span class="text-[var(--foreground)] font-medium">GitHub REST API 플랫폼 한도 (PR/이슈)</span>
-                <span class="font-mono font-semibold text-emerald-600 dark:text-emerald-400">${corePct.toFixed(1)}% 잔여 (${coreRem.toLocaleString()} / ${coreLim.toLocaleString()})</span>
+          let mHtml = `
+            <div class="rounded-md border border-[var(--card-border)] bg-[var(--surface-variant,rgba(0,0,0,0.015))] p-2 space-y-2">
+              <div class="flex items-center justify-between pb-1 border-b border-[var(--card-border)]/50">
+                <div class="flex items-center gap-1.5 font-semibold text-[11px] text-[var(--foreground)]">
+                  <span class="text-xs">${q.icon || '🤖'}</span> ${q.displayName || k}
+                </div>
+                <span class="text-[9px] text-emerald-600 dark:text-emerald-400 font-medium font-mono">${q.statusText || '정상 연동'}</span>
               </div>
-              <div class="w-full h-2 rounded-full bg-[var(--card-border)] overflow-hidden">
-                <div class="h-full bg-emerald-500 rounded-full transition-all duration-500" style="width: ${corePct}%;"></div>
-              </div>
-              <div class="text-[9px] text-[var(--muted-foreground)] flex justify-between">
-                <span>플랫폼 REST API: 5,000 req/hr</span>
-                <span>리셋 예정: 1시간 슬라이딩 갱신</span>
-              </div>
-            </div>
 
-            <div class="space-y-1 pt-1">
-              <div class="flex items-center justify-between text-[10px]">
-                <span class="text-[var(--foreground)] font-medium">GitHub Copilot 잔여 가용량 (AIC)</span>
-                <span class="font-mono font-semibold text-purple-600 dark:text-purple-400">${cpPct.toFixed(1)}% 잔여 (${cpRem.toLocaleString()} / 2,000)</span>
-              </div>
-              <div class="w-full h-2 rounded-full bg-[var(--card-border)] overflow-hidden">
-                <div class="h-full bg-purple-500 rounded-full transition-all duration-500" style="width: ${cpPct}%;"></div>
-              </div>
-              <div class="text-[9px] text-[var(--muted-foreground)] flex justify-between">
-                <span>세션 기준치: 1 AIC</span>
-                <span>단위: AI Credits (AIC) / 주간 갱신</span>
+              <div class="space-y-1">
+                <div class="flex items-center justify-between text-[10px]">
+                  <span class="text-[var(--foreground)] font-medium">잔여 가용 쿼터 (${q.unit || '%'})</span>
+                  <span class="font-mono font-semibold ${textClass}">${remStr}</span>
+                </div>
+                <div class="w-full h-2 rounded-full bg-[var(--card-border)] overflow-hidden">
+                  <div class="h-full ${colorClass} rounded-full transition-all duration-500" style="width: ${Math.min(100, Math.max(0, remPct))}%;"></div>
+                </div>
+                <div class="text-[9px] text-[var(--muted-foreground)] flex justify-between">
+                  <span>단위: ${q.unit || '기본'}</span>
+                  <span>리셋 예정: ${q.resetDesc || '자동 갱신'}</span>
+                </div>
               </div>
             </div>
-          </div>
-        `;
-        container.insertAdjacentHTML('beforeend', ghHtml);
+          `;
+          container.insertAdjacentHTML('beforeend', mHtml);
+        });
+
+        // 미연동 코워커 집계
+        ['claude', 'copilot', 'codex'].forEach(name => {
+          if (!activeQuotas[name]) {
+            const p = ext[name] || {};
+            unconnectedCount++;
+            const label = name === 'claude' ? 'Claude Code' : (name === 'copilot' ? 'GitHub Copilot' : 'OpenAI Codex');
+            unconnectedNames.push(label + (p.installed ? ' (로그인 대기)' : ' (미설치)'));
+          }
+        });
+
       } else {
-        unconnectedCount++;
-        unconnectedNames.push('GitHub Copilot');
-      }
+        // 기존 폴백: externalProviders 기준 적응형 렌더링
+        const cp = ext.copilot || {};
+        const gh = ext.gh || {};
+        if ((cp.installed && cp.loggedIn) || (gh.installed && gh.loggedIn)) {
+          const ghRate = gh.rateLimit || {};
+          const coreRem = ghRate.coreRemaining !== undefined ? ghRate.coreRemaining : 4980;
+          const coreLim = ghRate.coreLimit || 5000;
+          const corePct = Math.min(100, (coreRem / coreLim) * 100);
+          const cpRem = ghRate.copilotRemaining !== undefined ? ghRate.copilotRemaining : 1750;
+          const cpPct = Math.min(100, (cpRem / 2000) * 100);
+          const userStr = cp.user || gh.user || '정상 연동';
 
-      // 3. OpenAI Codex (실제 로그인된 경우에만 적응형 표시)
-      const cdx = ext.codex || {};
-      if (cdx.installed && cdx.loggedIn) {
-        const cdxEmail = cdx.email || 'ChatGPT 계정';
-        const cdxPlan = (cdx.plan || 'Free').toUpperCase();
-        const cdxModel = cdx.model || 'gpt-6-luna';
-        const cdxEffort = cdx.reasoningEffort || 'medium';
-
-        let cdxHtml = `
-          <div class="rounded-md border border-[var(--card-border)] bg-[var(--surface-variant,rgba(0,0,0,0.015))] p-2 space-y-2">
-            <div class="flex items-center justify-between pb-1 border-b border-[var(--card-border)]/50">
-              <div class="flex items-center gap-1.5 font-semibold text-[11px] text-[var(--foreground)]">
-                <span class="text-xs">🤖</span> OpenAI Codex (ChatGPT 연동)
+          let ghHtml = `
+            <div class="rounded-md border border-[var(--card-border)] bg-[var(--surface-variant,rgba(0,0,0,0.015))] p-2 space-y-2">
+              <div class="flex items-center justify-between pb-1 border-b border-[var(--card-border)]/50">
+                <div class="flex items-center gap-1.5 font-semibold text-[11px] text-[var(--foreground)]">
+                  <span class="text-xs">🐙</span> GitHub Copilot & GitHub CLI
+                </div>
+                <span class="text-[9px] text-emerald-600 dark:text-emerald-400 font-medium font-mono">${userStr} · 연동 활성화</span>
               </div>
-              <span class="text-[9px] text-emerald-600 dark:text-emerald-400 font-medium font-mono">${cdxEmail} · ${cdxPlan}</span>
-            </div>
-
-            <div class="space-y-1">
-              <div class="flex items-center justify-between text-[10px]">
-                <span class="text-[var(--foreground)] font-medium">Codex 세션 가용 상태 (${cdxModel})</span>
-                <span class="font-mono font-semibold text-emerald-600 dark:text-emerald-400">100.0% 가용 정상</span>
-              </div>
-              <div class="w-full h-2 rounded-full bg-[var(--card-border)] overflow-hidden">
-                <div class="h-full bg-emerald-500 rounded-full transition-all duration-500" style="width: 100%;"></div>
-              </div>
-              <div class="text-[9px] text-[var(--muted-foreground)] flex justify-between">
-                <span>추론 수준: ${cdxEffort}</span>
-                <span>인증 상태: 정상 연동</span>
-              </div>
-            </div>
-          </div>
-        `;
-        container.insertAdjacentHTML('beforeend', cdxHtml);
-      } else {
-        unconnectedCount++;
-        unconnectedNames.push('OpenAI Codex');
-      }
-
-      // 4. Anthropic Claude Code (로그인되어 연결된 경우에만 게이지 표시)
-      const cld = ext.claude || {};
-      if (cld.installed && cld.loggedIn) {
-        let cldHtml = `
-          <div class="rounded-md border border-[var(--card-border)] bg-[var(--surface-variant,rgba(0,0,0,0.015))] p-2 space-y-2">
-            <div class="flex items-center justify-between pb-1 border-b border-[var(--card-border)]/50">
-              <div class="flex items-center gap-1.5 font-semibold text-[11px] text-[var(--foreground)]">
-                <span class="text-xs">🔮</span> Anthropic Claude Code (독립 CLI)
-              </div>
-              <span class="text-[9px] text-emerald-600 dark:text-emerald-400 font-medium font-mono">정상 연동</span>
-            </div>
-
-            <div class="space-y-1">
-              <div class="flex items-center justify-between text-[10px]">
-                <span class="text-[var(--foreground)] font-medium">Claude Code 세션 가용량</span>
-                <span class="font-mono font-semibold text-emerald-600 dark:text-emerald-400">100.0% 정상</span>
-              </div>
-              <div class="w-full h-2 rounded-full bg-[var(--card-border)] overflow-hidden">
-                <div class="h-full bg-emerald-500 rounded-full transition-all duration-500" style="width: 100%;"></div>
+              <div class="space-y-1">
+                <div class="flex items-center justify-between text-[10px]">
+                  <span class="text-[var(--foreground)] font-medium">GitHub REST API 플랫폼 한도 (PR/이슈)</span>
+                  <span class="font-mono font-semibold text-emerald-600 dark:text-emerald-400">${corePct.toFixed(1)}% 잔여 (${coreRem.toLocaleString()} / ${coreLim.toLocaleString()})</span>
+                </div>
+                <div class="w-full h-2 rounded-full bg-[var(--card-border)] overflow-hidden">
+                  <div class="h-full bg-emerald-500 rounded-full transition-all duration-500" style="width: ${corePct}%;"></div>
+                </div>
+                <div class="text-[9px] text-[var(--muted-foreground)] flex justify-between">
+                  <span>플랫폼 REST API: 5,000 req/hr</span>
+                  <span>리셋 예정: 1시간 슬라이딩 갱신</span>
+                </div>
               </div>
             </div>
-          </div>
-        `;
-        container.insertAdjacentHTML('beforeend', cldHtml);
-      } else {
-        unconnectedCount++;
-        unconnectedNames.push('Claude Code' + (cld.installed ? ' (로그인 대기)' : ''));
+          `;
+          container.insertAdjacentHTML('beforeend', ghHtml);
+        } else {
+          unconnectedCount++;
+          unconnectedNames.push('GitHub Copilot');
+        }
+
+        const cdx = ext.codex || {};
+        if (cdx.installed && cdx.loggedIn) {
+          const cdxEmail = cdx.email || 'ChatGPT 계정';
+          let cdxHtml = `
+            <div class="rounded-md border border-[var(--card-border)] bg-[var(--surface-variant,rgba(0,0,0,0.015))] p-2 space-y-2">
+              <div class="flex items-center justify-between pb-1 border-b border-[var(--card-border)]/50">
+                <div class="flex items-center gap-1.5 font-semibold text-[11px] text-[var(--foreground)]">
+                  <span class="text-xs">🤖</span> OpenAI Codex (ChatGPT 연동)
+                </div>
+                <span class="text-[9px] text-emerald-600 dark:text-emerald-400 font-medium font-mono">${cdxEmail}</span>
+              </div>
+              <div class="space-y-1">
+                <div class="flex items-center justify-between text-[10px]">
+                  <span class="text-[var(--foreground)] font-medium">Codex 세션 가용 상태</span>
+                  <span class="font-mono font-semibold text-emerald-600 dark:text-emerald-400">100.0% 가용 정상</span>
+                </div>
+                <div class="w-full h-2 rounded-full bg-[var(--card-border)] overflow-hidden">
+                  <div class="h-full bg-emerald-500 rounded-full transition-all duration-500" style="width: 100%;"></div>
+                </div>
+              </div>
+            </div>
+          `;
+          container.insertAdjacentHTML('beforeend', cdxHtml);
+        } else {
+          unconnectedCount++;
+          unconnectedNames.push('OpenAI Codex');
+        }
       }
 
       // 미연동 코워커 안내 뱃지
