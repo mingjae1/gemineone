@@ -100,6 +100,8 @@ To prevent command collisions and maintain disciplined UX, orchestration control
   - 터미널: `python .agents/scripts/orca.py dispatch --target <copilot|codex> --prompt "<작업지시>"`
   - 대화창: `/orca dispatch <target> "<작업지시>"`
   - 에이전트 자율 위임: 단일 모델의 편향을 방지하고 정확성을 극대화하기 위해, 중요한 코드 변경 전후로 `dispatch_subagent.py`를 통해 교차 검증을 능동적으로 호출합니다.
+  - 자율 협업 파이프라인: `AutoCollaborator`를 통해 동시성/보안 작업 시 OpenAI Codex 2차 교차 검증, 깃/PR 작업 시 GitHub Copilot을 조건에 따라 자동 트리거합니다.
+
 
 
 

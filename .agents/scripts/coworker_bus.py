@@ -453,7 +453,7 @@ class CoworkerEventBus:
         if not mod:
             return {
                 "success": False,
-                "error": f"코워커 모듈 '{target}'이 이벤트 버스에 등록되어 있지 않습니다. 가용 모듈: {[m.name for m in cls.list_modules()]}",
+                "error": f"Unknown dispatch target '{target}'. 코워커 모듈 '{target}'이 이벤트 버스에 등록되어 있지 않습니다. 가용 모듈: {[m.name for m in cls.list_modules()]}",
                 "provider": target,
             }
         try:

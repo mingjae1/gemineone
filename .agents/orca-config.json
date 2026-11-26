@@ -6,7 +6,7 @@
   "quotaMonitoring": {
     "enabled": true,
     "dailyTokenBaseline": 5000000,
-    "lowQuotaThresholdPercent": 70.0,
+    "lowQuotaThresholdPercent": 10.0,
     "displayInSummary": true,
     "calibratedLimits": {
       "fiveHourRemainingPercent": 95.1,
@@ -17,7 +17,7 @@
       "weeklyLimitPercent": 25.0
     },
     "alertSettings": {
-      "thresholdPercent": 70.0,
+      "thresholdPercent": 10.0,
       "fiveHourThresholdPercent": 10.0,
       "weeklyThresholdPercent": 25.0,
       "alertScope": "low_only",
@@ -39,6 +39,43 @@
           "threshold": 20.0
         }
       }
+    }
+  },
+  "autonomousCollaboration": {
+    "enabled": true,
+    "autoCrossVerification": {
+      "enabled": true,
+      "target": "codex",
+      "model": "gpt-6-luna",
+      "triggerKeywords": [
+        "architect",
+        "concurrency",
+        "security",
+        "deadlock",
+        "critical",
+        "심층",
+        "보안",
+        "동시성",
+        "교차 검증",
+        "에지케이스"
+      ]
+    },
+    "autoGitCopilot": {
+      "enabled": true,
+      "target": "copilot",
+      "triggerKeywords": [
+        "pr",
+        "pull request",
+        "commit",
+        "git",
+        "커밋",
+        "풀리퀘스트"
+      ]
+    },
+    "autoQuotaOffloading": {
+      "enabled": true,
+      "thresholdPercent": 10.0,
+      "preferredFallback": "copilot"
     }
   },
   "adaptiveEffort": {
