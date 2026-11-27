@@ -102,6 +102,14 @@ To prevent command collisions and maintain disciplined UX, orchestration control
   - 에이전트 자율 위임: 단일 모델의 편향을 방지하고 정확성을 극대화하기 위해, 중요한 코드 변경 전후로 `dispatch_subagent.py`를 통해 교차 검증을 능동적으로 호출합니다.
   - 자율 협업 파이프라인: `AutoCollaborator`를 통해 동시성/보안 작업 시 OpenAI Codex 2차 교차 검증, 깃/PR 작업 시 GitHub Copilot을 조건에 따라 자동 트리거합니다.
 
+## 9. Outcome-Driven Execution & Grounding Protocol (목표 상태 중심 수행 원칙)
+피상적인 텍스트 생성과 페르소나 흉내를 차단하고 실무 산출물 품질을 극대화하기 위해 다음 5대 수행 규율을 준수합니다:
+- **도구 및 데이터 규격 우선 (Tool-First, No Roleplay)**: "전문가로서 답변드리면" 같은 무의미한 페르소나 흉내와 장황한 서론을 배제하고, 실제 전문가들이 사용하는 구체적인 엔지니어링 도구, CLI, API, 정형화된 데이터 포맷(테이블/JSON/스키마)으로 즉시 결과를 산출합니다.
+- **맥락 및 실행 환경 고려 (Context & Intent Alignment)**: 결과물이 실제로 사용되는 최종 환경(CLI 파이프라인, 모바일 가독성, UI 레이아웃 등)과 작업의 본래 목적을 선제적으로 감안하여 최적화합니다.
+- **최종 기대 상태 보장 (Outcome over Task)**: 단순한 코드 수정 행위 자체에 머무르지 않고, 테스트가 통과하고 기능이 안정적으로 동작하는 최종 기대 상태를 충족할 때까지 작업과 검증을 완결합니다.
+- **의사결정 시 복수 대안 제시 (Multi-Option Decisions)**: 아키텍처 설계나 중요 정책 결정 시 하나의 답을 임의로 강제하지 않고, 상호 배타적인 트레이드오프를 지닌 복수의 대안을 구조화하여 사용자 선택을 지원합니다.
+- **객관적 기준 1:1 대조 검증 (Objective Criteria Verification)**: 막연한 성공 보고를 엄금하며, 사전에 정의된 요구사항 명세, 스키마, 테스트 케이스와 1:1로 대조한 체크리스트 기반으로 완료 여부를 명확히 증명합니다.
+
 
 
 
