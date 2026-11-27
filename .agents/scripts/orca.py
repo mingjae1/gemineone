@@ -143,7 +143,7 @@ def cmd_status(args):
     ext = telemetry.get("externalProviders", {})
 
     print("🧭 [ORCA Orchestration Status]")
-    print(f"• 엔진 버전     : gemineone v{config.get('version', '0.4.0')}")
+    print(f"• 엔진 버전     : gemineone v{config.get('version', '0.4.1')}")
     print(f"• 메인 코디네이터: gemini-3.8-flash-high (1D Fast Intake)")
     print(f"• 기본 작업 티어 : {config.get('defaultTier', 'hydrogen-high')}")
 

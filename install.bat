@@ -27,7 +27,7 @@ if "!TARGET_DIR:~-1!"=="\" (
 :slash_done
 if "!TARGET_DIR:~-1!"=="\" set "TARGET_DIR=!TARGET_DIR!."
 
-echo [gemineone 0.4.0] Installing self-bootstrapping orchestration harness into !TARGET_DIR!...
+echo [gemineone 0.4.1] Installing self-bootstrapping orchestration harness into !TARGET_DIR!...
 if not exist "!TARGET_DIR!\.agents" mkdir "!TARGET_DIR!\.agents"
 robocopy "%~dp0.agents" "!TARGET_DIR!\.agents" /E /XJ /XD __pycache__ /XF orca-audit.log .orca-state.json *.pyc >nul
 if errorlevel 8 (

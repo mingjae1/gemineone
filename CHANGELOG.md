@@ -2,6 +2,40 @@
 
 All notable changes to **gemineone** will be documented in this file.
 
+## [0.4.1] - 2026-11-28
+
+### Added
+- **플러그형 코워커 이벤트 버스 (`CoworkerEventBus`) 및 규격 계약**:
+  - `CoworkerModuleSpec` 추상 클래스 기반 모듈 규격 정의 (`probe()`, `get_quota()`, `dispatch()`)
+  - GitHub Copilot, GitHub CLI, OpenAI Codex, Claude Code를 동적으로 부착/감지/제어하는 중앙 이벤트 버스 아키텍처 도입
+- **자율 협업 파이프라인 (`AutoCollaborator`) 및 다중 에이전트 위임**:
+  - 동시성/보안/데드락 작업 감지 시 OpenAI Codex(`gpt-6-luna`) 기반 2차 교차 검증(Cross-Verification) 자동 트리거
+  - 깃 커밋/PR 컨텍스트 분석 시 GitHub Copilot CLI 자동 연동
+  - 5시간 쿼터 고갈 시(<=10%) 외부 코워커 오프로딩 파이프라인
+  - 통합 단축 명령 `/orca dispatch --target <copilot|codex> --prompt "<작업지시>"` 지원
+- **실시간 쿼터 리프래시 주기 텔레메트리**:
+  - Google Antigravity 5시간 슬라이딩 롤링 윈도우 및 주간 충전 주기 명시
+  - GitHub REST API 1시간 고정 윈도우, Copilot 월간 결제일+분당 제어, Codex 3시간 슬라이딩 롤링 명시
+  - UI 제어 센터 및 터미널 CLI(`/orca status`, `/orca quota`)에 리프래시 메커니즘 실시간 뱃지 노출
+- **원클릭 로컬 즉시 저장 네이티브 GUI (`orca-settings.bat` & `orca_gui.py`)**:
+  - 브라우저 샌드박스의 한계를 넘어 OS 로컬 권한으로 `.agents/orca-config.json`을 즉시 영구 저장하는 전용 다크 테마 GUI 구축
+  - `orca setting --ui` 및 `orca-settings.bat`을 통해 원클릭 팝업 지원
+- **목표 상태 중심 수행 원칙 (`GEMINI.md` Section 9)**:
+  - 도구 및 데이터 규격 우선 (Tool-First, No Roleplay)
+  - 맥락 및 실행 환경 고려 (Context & Intent Alignment)
+  - 최종 기대 상태 보장 (Outcome over Task)
+  - 의사결정 시 복수 대안 제시 (Multi-Option Decisions)
+  - 객관적 기준 1:1 대조 검증 (Objective Criteria Verification)
+
+### Changed
+- **하드코딩 표준 UI 제어 센터 및 아티팩트 동적 스테이징**:
+  - `.agents/ui/orca_control_center.html` 표준 템플릿 도입 (임의 런타임 코드 생성 엄격 차단)
+  - 활성 외부 코워커만 깔끔하게 렌더링하는 적응형 게이지 렌더링 도입
+- **버전 식별자 업데이트**:
+  - 전체 하네스 구성 및 템플릿 버전 식별자를 `v0.4.1`로 갱신
+
+---
+
 ## [0.4.0] - 2026-11-24
 
 ### Added

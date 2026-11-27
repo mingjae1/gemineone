@@ -1,4 +1,4 @@
-﻿# 🚀 gemineone (제미너네) `v0.4.0`
+﻿# 🚀 gemineone (제미너네) `v0.4.1`
 
 AI 코딩 에이전트를 위한 작업 분업 및 오케스트레이션 도구입니다. 대화 접수와 코드 작성을 분리하여 속도를 높이고 사용 쿼터를 절약합니다.
 
@@ -165,9 +165,9 @@ python -X utf8 .agents/scripts/test_genesis.py
 
 ```bash
 # 1. 태그 푸시
-git tag v0.4.0
-git push origin v0.4.0
+git tag v0.4.1
+git push origin v0.4.1
 
 # 2. 릴리즈 발행
-gh release create v0.4.0 --title "v0.4.0" --notes-file CHANGELOG.md
+gh release create v0.4.1 --title "v0.4.1" --notes-file CHANGELOG.md
 ```

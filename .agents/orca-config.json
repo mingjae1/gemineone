@@ -1,5 +1,5 @@
 {
-  "version": "0.4.0",
+  "version": "0.4.1",
   "enabled": true,
   "enforceWorkerForEdits": true,
   "defaultTier": "hydrogen-high",
@@ -9,8 +9,8 @@
     "lowQuotaThresholdPercent": 10.0,
     "displayInSummary": true,
     "calibratedLimits": {
-      "fiveHourRemainingPercent": 88.7,
-      "weeklyRemainingPercent": 85.7
+      "fiveHourRemainingPercent": 98.8,
+      "weeklyRemainingPercent": 72.4
     },
     "thresholds": {
       "fiveHourLimitPercent": 10.0,

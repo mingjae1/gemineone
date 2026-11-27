@@ -60,7 +60,7 @@ def test_install_bat_end_to_end():
 
         with open(cfg_path, "r", encoding="utf-8") as f:
             cfg = json.load(f)
-        assert_true(cfg.get("version") == "0.4.0", f"Unexpected version: {cfg.get('version')}")
+        assert_true(cfg.get("version") == "0.4.1", f"Unexpected version: {cfg.get('version')}")
         assert_true(cfg.get("enableCarbon") is False, "Shared config must stay Pro-Safe (enableCarbon=False)")
         assert_true("SETUP.md" in cfg.get("exemptPathSubstrings", []), "SETUP.md must be exempt")
         assert_true(len(cfg.get("allowedWorkerModels", [])) > 0, "allowedWorkerModels must not be empty")
@@ -179,7 +179,7 @@ def test_offline_fallback_config():
         env_info = {"antigravity": False, "cursor": True, "claude": False, "agy_cli_path": None}
         cfg, state = bootstrap.generate_tailored_config(tmpdir, {}, {}, [], env_info)
 
-        assert_true(cfg["version"] == "0.4.0", "Version mismatch in offline config")
+        assert_true(cfg["version"] == "0.4.1", "Version mismatch in offline config")
         assert_true(cfg["environment"]["hasNeon"] is False, "hasNeon should be False offline")
         assert_true(cfg["environment"]["hasCarbon"] is False, "hasCarbon should be False offline")
         assert_true(cfg["defaultTier"] == "hydrogen-high", "Offline defaultTier should be hydrogen-high")
@@ -199,7 +199,7 @@ def main():
         ("Offline fallback config generation", test_offline_fallback_config),
     ]
 
-    print("=== gemineone 0.4.0 Bootstrap Test Suite ===")
+    print("=== gemineone 0.4.1 Bootstrap Test Suite ===")
     passed = 0
     for name, fn in tests:
         try:

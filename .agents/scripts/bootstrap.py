@@ -182,7 +182,7 @@ def generate_tailored_config(target_dir, models, mcp_servers, plugins, env_info)
 
     # Build safe base config
     cfg = {
-        "version": "0.4.0",
+        "version": "0.4.1",
         "enabled": True,
         "enforceWorkerForEdits": True,
         "enableCarbon": False,  # Pro-safe default in shared config
